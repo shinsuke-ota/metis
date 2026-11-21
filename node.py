@@ -133,6 +133,11 @@ class Node:
             except websockets.exceptions.ConnectionClosed:
                 pass
 
+    async def close_device(self):
+        close = getattr(self.device, "close", None)
+        if callable(close):
+            await close()
+
     async def notify_change(self):
         async with self.changed:
             self.revision += 1
@@ -314,6 +319,7 @@ async def lifespan(app):
         if app.state.upstream_task:
             with suppress(asyncio.CancelledError):
                 await app.state.upstream_task
+        await node.close_device()
 
 
 app = FastAPI(title="Configurable node", lifespan=lifespan)
@@ -351,6 +357,7 @@ async def put_config(values: Configuration):
     node.config = changed
     node.node_id = changed["node_id"]
     node.parent_ws = changed["parent_ws"]
+    await node.close_device()
     node.device = device
     node.latest = device.monitors() if device else {}
     await node.update_state()
