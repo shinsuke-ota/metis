@@ -58,7 +58,7 @@ onUnmounted(() => stop?.());
     </table>
     <h3>集約対象を追加</h3>
     <form @submit.prevent="add">
-      <label>Device ID <input v-model="draft.device_id" required pattern="[A-Za-z0-9_-]{1,100}"></label>
+      <label>デバイス ID <input v-model="draft.device_id" required placeholder="例：C2:C21" pattern="[A-Za-z0-9_\-]{1,100}(?::[A-Za-z0-9_\-]{1,100})?"></label>
       <label>表示名 <input v-model="draft.label"></label>
       <label>監視名 <input v-model="draft.monitor" required></label>
       <label>カウントのキー <input v-model="draft.count_field" required></label>
