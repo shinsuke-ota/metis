@@ -2,7 +2,7 @@
 <html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>エッジ時刻デモ</title><style>
 body{font-family:system-ui,sans-serif;background:#eef3f6;color:#172d3a;margin:0;padding:2rem}
-main{max-width:800px;margin:auto}.clock{background:white;border-radius:12px;padding:2rem;box-shadow:0 4px 20px #1232}
+main{max-width:1000px;margin:auto}.clock{background:white;border-radius:12px;padding:2rem;box-shadow:0 4px 20px #1232}
 strong{font-variant-numeric:tabular-nums;font-size:clamp(1.3rem,4vw,2.2rem);overflow-wrap:anywhere}
 button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius:6px;cursor:pointer}
 .device-tabs{display:flex;gap:.35rem;overflow-x:auto;border-bottom:2px solid #145780}
@@ -13,7 +13,13 @@ button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius
 .device-tabs button[data-state="unknown"]{border-bottom:4px solid #77818a}
 .device-tabs button:focus-visible{outline:3px solid #e79c28;outline-offset:-3px}
 .device-panel{padding-top:1rem}
-.iseg-panel{min-width:0}
+.iseg-panel{min-width:0;max-width:100%}
+.iseg-group-tabs{display:flex;gap:.35rem;overflow-x:auto;margin-block:1rem;border-bottom:2px solid #145780;padding:.2rem .15rem 0}
+.iseg-group-tabs button{flex:none;white-space:nowrap;background:#d7e4ec;color:#172d3a;border-radius:.4rem .4rem 0 0}
+.iseg-group-tabs button[aria-selected="true"]{background:#145780;color:white}
+.iseg-group-tabs button:focus-visible{outline:3px solid #e79c28;outline-offset:-3px}
+.iseg-unassigned{margin-block:1rem;border:1px solid #bfced6;border-radius:.4rem}
+.iseg-unassigned summary{padding:.55rem .7rem;cursor:pointer;font-weight:600}
 .iseg-panel form{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem}
 .iseg-panel input:not([type=checkbox]){box-sizing:border-box;max-width:100%}
 .iseg-table-scroll{max-width:100%;overflow-x:auto}

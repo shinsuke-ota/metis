@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, useId } from 'vue';
 
 const props = defineProps({ client: { type: Object, required: true } });
 const state = ref({ modules: [], policies: {} });
@@ -72,7 +72,7 @@ const groups = computed(() => {
     const serial = String(module['Status.serialNumber'] ?? '');
     for (const [channel, items] of Object.entries(module.channels)) {
       const settings = state.value.policies[serial + ':' + channel] ?? {};
-      const group = settings.group || '未分類';
+      const group = settings.group || '';
       if (!result.has(group)) result.set(group, []);
       result.get(group).push({
         key: serial + ':' + module.line + ':' + module.address + ':' + channel,
@@ -82,6 +82,29 @@ const groups = computed(() => {
   }
   return result;
 });
+
+const tabsId = useId();
+const selectedGroup = ref('');
+const groupNames = computed(() => [...groups.value.keys()].filter(Boolean));
+const activeGroup = computed(() => groupNames.value.includes(selectedGroup.value) ? selectedGroup.value : groupNames.value[0]);
+const channelSections = computed(() => {
+  const sections = [];
+  if (activeGroup.value) sections.push({ key: 'group', label: activeGroup.value, rows: groups.value.get(activeGroup.value) });
+  if (groups.value.has('')) sections.push({ key: 'unassigned', label: '未分類', rows: groups.value.get('') });
+  return sections;
+});
+const activeTabIndex = computed(() => groupNames.value.indexOf(activeGroup.value));
+
+function navigateGroups(event) {
+  const count = groupNames.value.length;
+  const index = activeTabIndex.value;
+  const next = { ArrowLeft: (index - 1 + count) % count, ArrowRight: (index + 1) % count,
+    Home: 0, End: count - 1 }[event.key];
+  if (!Number.isInteger(next)) return;
+  event.preventDefault();
+  selectedGroup.value = groupNames.value[next];
+  event.currentTarget.children[next]?.focus();
+}
 
 const allRows = computed(() => [...groups.value.values()].flat().filter(row => row.serial));
 const checkedRows = computed(() => allRows.value.filter(row => checked.value.includes(row.key)));
@@ -272,8 +295,14 @@ onUnmounted(() => unsubscribe?.());
       <input type="checkbox" :disabled="!allRows.length" @change="toggleAll"
         :checked="allRows.length > 0 && checkedRows.length === allRows.length"
         :indeterminate.prop="checkedRows.length > 0 && checkedRows.length < allRows.length">
-      全選択
+      全グループを選択
     </label>
+    <div v-if="groupNames.length" class="iseg-group-tabs" role="tablist"
+      aria-label="チャンネルグループ" @keydown="navigateGroups">
+      <button v-for="(group, index) in groupNames" :id="tabsId + '-tab-' + index" :key="group"
+        type="button" role="tab" :aria-selected="group === activeGroup" :aria-controls="tabsId + '-panel'"
+        :tabindex="group === activeGroup ? 0 : -1" @click="selectedGroup = group">{{ group }}</button>
+    </div>
     <template v-if="detailMode">
       <h3>選択チャンネルの一括設定</h3>
       <form class="iseg-bulk" @submit.prevent="saveBulk">
@@ -297,13 +326,26 @@ onUnmounted(() => unsubscribe?.());
           選択した {{ checkedRows.length }} CH に適用
         </button>
       </form>
-      <div class="iseg-table-scroll" tabindex="0" role="region" aria-label="チャンネル詳細">
+    </template>
+    <p v-if="!detailMode">行の色：
+      <span v-for="(color, label) in rowColors" :key="label"
+        :style="{ background: color, padding: '.15rem .4rem', marginInlineEnd: '.25rem', border: '1px solid #bcc8cf' }">{{ label }}</span>
+    </p>
+    <component v-for="section in channelSections" :key="section.key"
+      :is="section.key === 'unassigned' ? 'details' : 'section'"
+      :class="{ 'iseg-unassigned': section.key === 'unassigned' }"
+      :open="section.key === 'unassigned' ? true : undefined"
+      :id="section.key === 'group' ? tabsId + '-panel' : undefined"
+      :role="section.key === 'group' ? 'tabpanel' : undefined"
+      :aria-labelledby="section.key === 'group' ? tabsId + '-tab-' + activeTabIndex : undefined">
+      <summary v-if="section.key === 'unassigned'">未分類（{{ section.rows.length }} CH）</summary>
+      <div v-if="detailMode" class="iseg-table-scroll" tabindex="0" role="region" :aria-label="section.label + ' チャンネル詳細'">
       <table class="iseg-data iseg-detail">
         <thead><tr>
           <th>選択</th><th>チャンネル</th><th>表示名</th><th>グループ</th><th>電圧範囲 (V)</th><th>電流範囲 (mA)</th><th>電流設定 (mA)</th><th>iseg 遅延トリップ</th><th></th>
         </tr></thead>
         <tbody>
-          <tr v-for="row in allRows" :key="row.key">
+          <tr v-for="row in section.rows.filter(item => item.serial)" :key="row.key">
             <td><input v-model="checked" type="checkbox" :value="row.key"
               :aria-label="row.serial + ' CH ' + row.channel"></td>
             <td>CH {{ row.channel }}<small class="iseg-address">{{ row.serial }} · {{ row.location }}</small></td>
@@ -340,14 +382,7 @@ onUnmounted(() => unsubscribe?.());
         </tbody>
       </table>
       </div>
-    </template>
-    <p v-if="!detailMode">行の色：
-      <span v-for="(color, label) in rowColors" :key="label"
-        :style="{ background: color, padding: '.15rem .4rem', marginInlineEnd: '.25rem', border: '1px solid #bcc8cf' }">{{ label }}</span>
-    </p>
-    <section v-for="[group, rows] in (detailMode ? [] : groups)" :key="group">
-      <h3>{{ group }}</h3>
-      <div class="iseg-table-scroll" tabindex="0" role="region" :aria-label="group + ' モニター'">
+      <div v-else class="iseg-table-scroll" tabindex="0" role="region" :aria-label="section.label + ' モニター'">
         <table class="iseg-data iseg-monitor">
           <thead><tr>
             <th>選択</th><th>表示名</th>
@@ -356,7 +391,7 @@ onUnmounted(() => unsubscribe?.());
             <th>電圧操作 (V)</th>
           </tr></thead>
           <tbody>
-            <tr v-for="row in rows" :key="row.key"
+            <tr v-for="row in section.rows" :key="row.key"
               :style="{ background: rowColors[channelState(row)], whiteSpace: 'nowrap' }">
               <td><input v-model="checked" type="checkbox" :value="row.key" :disabled="!row.serial"
                 :aria-label="'選択: ' + (row.settings.label || 'CH ' + row.channel)"></td>
@@ -383,7 +418,7 @@ onUnmounted(() => unsubscribe?.());
           </tbody>
         </table>
       </div>
-    </section>
+    </component>
     <form v-if="selected && detailMode" class="iseg-editor" @submit.prevent="savePolicy">
       <h3>{{ selected.serial }} / CH {{ selected.channel }}</h3>
       <label>グループ <input v-model="policy.group" maxlength="100"></label>
