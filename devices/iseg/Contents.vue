@@ -12,6 +12,11 @@ const bulk = reactive({ voltage: false, current: false, grouping: false, naming:
   voltage_min: '', voltage_max: '', current_min: '', current_max: '', group: '' });
 const policy = reactive({});
 const drafts = reactive({});
+const voltageFormat = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 4 });
+const currentFormat = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 3, maximumFractionDigits: 6 });
+const toVolts = { V: 1, kV: 1000 };
+const toMilliamps = { kA: 1e6, A: 1000, mA: 1, 'µA': .001, 'μA': .001, uA: .001, nA: 1e-6 };
+const amperes = value => Number(value) / 1000;
 const feedback = ref('');
 const logDialog = ref(null);
 const operationLog = ref([]);
@@ -70,7 +75,7 @@ function toggleAll(event) {
 
 const editorFields = [
   { key: 'voltage', label: '電圧', unit: 'V' },
-  { key: 'current', label: '電流', unit: 'A' },
+  { key: 'current', label: '電流', unit: 'mA' },
 ];
 function hasLimits(row, quantity) {
   return row.settings[quantity + '_min'] != null && row.settings[quantity + '_max'] != null;
@@ -79,8 +84,9 @@ async function saveBulk() {
   const changes = {};
   for (const { key } of editorFields) {
     if (bulk[key]) {
-      changes[key + '_min'] = Number(bulk[key + '_min']);
-      changes[key + '_max'] = Number(bulk[key + '_max']);
+      const parse = key === 'current' ? amperes : Number;
+      changes[key + '_min'] = parse(bulk[key + '_min']);
+      changes[key + '_max'] = parse(bulk[key + '_max']);
     }
   }
   if (bulk.grouping) changes.group = bulk.group;
@@ -89,9 +95,24 @@ async function saveBulk() {
   const targets = checkedRows.value.map(({ serial, channel }) => ({ serial, channel }));
   await request('configure_channels', { targets, changes }, targets.length + ' チャンネルに保存しました。');
 }
-function display(items, key) {
+function reading(items, key, factors, formatter) {
   const item = items[key];
-  return item ? String(item.value) + (item.unit ? ' ' + item.unit : '') : '—';
+  if (item?.value == null || (typeof item.value === 'string' && !item.value.trim())) return '—';
+  const value = Number(item.value) * factors[item.unit];
+  return Number.isFinite(value) ? formatter.format(value) : '—';
+}
+function voltage(items, key) {
+  return reading(items, key, toVolts, voltageFormat);
+}
+function current(items, key) {
+  return reading(items, key, toMilliamps, currentFormat);
+}
+function range(row, key) {
+  if (!hasLimits(row, key)) return '未設定';
+  const scale = key === 'current' ? 1000 : 1;
+  const formatter = key === 'current' ? currentFormat : voltageFormat;
+  return formatter.format(row.settings[key + '_min'] * scale) + ' ～ ' +
+    formatter.format(row.settings[key + '_max'] * scale);
 }
 function flag(items, key) {
   const value = String(items[key]?.value).toLowerCase();
@@ -157,14 +178,16 @@ function edit(row) {
   selected.value = row;
   policy.current_action = row.settings.current_action ?? 'none';
   for (const key of ['label', 'group', 'voltage_min', 'voltage_max', 'current_min', 'current_max']) {
-    policy[key] = row.settings[key] ?? '';
+    const value = row.settings[key];
+    policy[key] = value != null && key.startsWith('current_') ? Number((value * 1000).toPrecision(15)) : value ?? '';
   }
 }
 async function savePolicy() {
   const changes = { ...policy };
   delete changes.label;
   for (const key of ['voltage_min', 'voltage_max', 'current_min', 'current_max']) {
-    changes[key] = changes[key] === '' ? null : Number(changes[key]);
+    const parse = key.startsWith('current_') ? amperes : Number;
+    changes[key] = changes[key] === '' ? null : parse(changes[key]);
   }
   if (await request('configure_channels', {
     targets: [{ serial: selected.value.serial, channel: selected.value.channel }], changes,
@@ -189,7 +212,7 @@ onUnmounted(() => unsubscribe?.());
 </script>
 
 <template>
-  <article>
+  <article class="iseg-panel">
     <h2>iseg CC24</h2>
     <button type="button" @click="logDialog?.showModal()">操作ログ</button>
     <dialog ref="logDialog" aria-labelledby="iseg-operation-log-title"
@@ -260,9 +283,10 @@ onUnmounted(() => unsubscribe?.());
           選択した {{ checkedRows.length }} CH に適用
         </button>
       </form>
-      <table style="text-align: left">
+      <div class="iseg-table-scroll" tabindex="0" role="region" aria-label="チャンネル詳細">
+      <table class="iseg-data">
         <thead><tr>
-          <th>選択</th><th>チャンネル</th><th>表示名</th><th>グループ</th><th>電圧範囲 (V)</th><th>電流範囲 (A)</th><th>電流超過時</th><th></th>
+          <th>選択</th><th>チャンネル</th><th>表示名</th><th>グループ</th><th>電圧範囲 (V)</th><th>電流範囲 (mA)</th><th>電流設定 (mA)</th><th>電流超過時</th><th></th>
         </tr></thead>
         <tbody>
           <tr v-for="row in allRows" :key="row.key">
@@ -277,13 +301,22 @@ onUnmounted(() => unsubscribe?.());
             </form><small v-if="rowFeedback[row.key]" role="status">{{ rowFeedback[row.key] }}</small></td>
             <td>{{ row.settings.group || '未分類' }}</td>
             <td v-for="{ key } in editorFields" :key="key">
-              {{ hasLimits(row, key) ? row.settings[key + '_min'] + ' ～ ' + row.settings[key + '_max'] : '未設定' }}
+              {{ range(row, key) }}
+            </td>
+            <td>
+              <span class="iseg-number">{{ current(row.items, 'Control.currentSet') }}</span>
+              <form class="iseg-setpoint" @submit.prevent="send(row, 'set_current', amperes(drafts[row.key + 'a']))">
+                <input v-model="drafts[row.key + 'a']" type="number" step="any" required
+                  :aria-label="(row.settings.label || 'CH ' + row.channel) + ' 電流設定 (mA)'">
+                <button :disabled="busy || !nodeConnected || !state.online || !hasLimits(row, 'current')">設定</button>
+              </form>
             </td>
             <td>{{ ({ warn: '警告', off: '出力 OFF' })[row.settings.current_action] || '動作なし' }}</td>
             <td><button type="button" @click="edit(row)">編集</button></td>
           </tr>
         </tbody>
       </table>
+      </div>
     </template>
     <p v-if="!detailMode">行の色：
       <span v-for="(color, label) in rowColors" :key="label"
@@ -291,10 +324,13 @@ onUnmounted(() => unsubscribe?.());
     </p>
     <section v-for="[group, rows] in (detailMode ? [] : groups)" :key="group">
       <h3>{{ group }}</h3>
-      <div style="overflow-x: auto">
-        <table>
+      <div class="iseg-table-scroll" tabindex="0" role="region" :aria-label="group + ' モニター'">
+        <table class="iseg-data iseg-monitor">
           <thead><tr>
-            <th>選択</th><th>表示名</th><th>電圧 設定 / 実測</th><th>電流 設定 / 実測</th><th>設定</th>
+            <th>選択</th><th>表示名</th>
+            <th class="iseg-number">電圧設定 (V)</th><th class="iseg-number">電圧実測 (V)</th>
+            <th class="iseg-number">電流設定 (mA)</th><th class="iseg-number">電流実測 (mA)</th>
+            <th>電圧操作 (V)</th>
           </tr></thead>
           <tbody>
             <tr v-for="row in rows" :key="row.key"
@@ -308,22 +344,20 @@ onUnmounted(() => unsubscribe?.());
                   {{ row.settings.label || 'CH ' + row.channel }}
                 </button>
               </td>
-              <td>{{ display(row.items, 'Control.voltageSet') }} / {{ display(row.items, 'Status.voltageMeasure') }}</td>
-              <td>{{ display(row.items, 'Control.currentSet') }} / {{ display(row.items, 'Status.currentMeasure') }}</td>
-              <td><div style="display: flex; align-items: center; gap: .35rem">
-                <form style="display: inline-flex; align-items: center; gap: .2rem; margin: 0" @submit.prevent="send(row, 'set_voltage', Number(drafts[row.key + 'v']))">
-                  <label>V <input v-model="drafts[row.key + 'v']" type="number" step="any" required style="width: 5em"></label>
+              <td class="iseg-number">{{ voltage(row.items, 'Control.voltageSet') }}</td>
+              <td class="iseg-number iseg-measured">{{ voltage(row.items, 'Status.voltageMeasure') }}</td>
+              <td class="iseg-number">{{ current(row.items, 'Control.currentSet') }}</td>
+              <td class="iseg-number iseg-measured">{{ current(row.items, 'Status.currentMeasure') }}</td>
+              <td>
+                <form class="iseg-setpoint" @submit.prevent="send(row, 'set_voltage', Number(drafts[row.key + 'v']))">
+                  <input v-model="drafts[row.key + 'v']" type="number" step="any" required
+                    :aria-label="(row.settings.label || 'CH ' + row.channel) + ' 電圧設定 (V)'">
                   <button :disabled="busy || !nodeConnected || !state.online || !row.serial || !hasLimits(row, 'voltage')">設定</button>
-                </form>
-                <form style="display: inline-flex; align-items: center; gap: .2rem; margin: 0" @submit.prevent="send(row, 'set_current', Number(drafts[row.key + 'a']))">
-                  <label>A <input v-model="drafts[row.key + 'a']" type="number" step="any" required style="width: 5em"></label>
-                  <button :disabled="busy || !nodeConnected || !state.online || !row.serial || !hasLimits(row, 'current')">設定</button>
                 </form>
                 <span v-if="state.overcurrent?.[row.serial + ':' + row.channel]" role="status">
                   {{ state.overcurrent[row.serial + ':' + row.channel] }}
                 </span>
-                <span v-if="rowFeedback[row.key]" role="status">{{ rowFeedback[row.key] }}</span>
-              </div>
+                <small v-if="rowFeedback[row.key]" class="iseg-row-feedback" role="status">{{ rowFeedback[row.key] }}</small>
               </td>
             </tr>
           </tbody>
@@ -335,8 +369,8 @@ onUnmounted(() => unsubscribe?.());
       <label>グループ <input v-model="policy.group" maxlength="100"></label>
       <label>最低電圧 (V) <input v-model="policy.voltage_min" type="number" step="any"></label>
       <label>最高電圧 (V) <input v-model="policy.voltage_max" type="number" step="any"></label>
-      <label>最低電流 (A) <input v-model="policy.current_min" type="number" step="any"></label>
-      <label>最高電流 (A) <input v-model="policy.current_max" type="number" step="any"></label>
+      <label>最低電流 (mA) <input v-model="policy.current_min" type="number" step="any"></label>
+      <label>最高電流 (mA) <input v-model="policy.current_max" type="number" step="any"></label>
       <label>電流上限超過時の動作
         <select v-model="policy.current_action">
           <option value="none">動作なし</option><option value="warn">警告</option><option value="off">出力 OFF</option>
