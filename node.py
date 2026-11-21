@@ -29,9 +29,8 @@ MANAGEMENT_PLUGINS = tuple(name for name, factory in PLUGINS.items()
 
 
 def registrations(config):
-    primary = [("default", config["device_plugin"])] if config["device_plugin"] and config["default_device"] else []
-    return dict(primary + [(name, config["device_plugin"]) for name in config["device_instances"]]
-                + list(config["management_plugins"].items()))
+    return {**dict.fromkeys(config["device_instances"], config["device_plugin"]),
+            **config["management_plugins"]}
 
 
 def public_config(config):
@@ -50,8 +49,7 @@ def load_config():
         "monitor_interval": os.getenv("NODE_MONITOR_INTERVAL", "60"),
     }
     config = {key: values.get(key, default) for key, default in defaults.items()}
-    config.update(default_device=json.loads(values.get("default_device", "true")),
-                  device_instances=json.loads(values.get("device_instances", "[]")),
+    config.update(device_instances=json.loads(values.get("device_instances", "[]")),
                   management_plugins=json.loads(values.get("management_plugins", "{}")))
     return config
 
@@ -64,10 +62,10 @@ def save_config(values):
 
 
 def settings_key(plugin, instance):
-    return f"settings:{plugin}" if instance == "default" else f"settings:{plugin}:{instance}"
+    return f"settings:{plugin}:{instance}"
 
 
-def make_device(name, instance="default"):
+def make_device(name, instance):
     device = create_device(name)
     if device and callable(getattr(device, "restore_settings", None)):
         key = settings_key(name, instance)
@@ -109,18 +107,17 @@ def validate_config(values, current):
     if values.device_instances is None and not values.device_plugin:
         instances = []
     managers = current["management_plugins"] if values.management_plugins is None else values.management_plugins
-    default_device = current["default_device"] if values.default_device is None else values.default_device
     ids = [*instances, *managers]
     if len(ids) != len(set(ids)) or any(
-        name == "default" or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", name) for name in ids
+        not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", name) for name in ids
     ):
-        raise HTTPException(422, "インスタンス ID は重複しない英数字、_、- で指定してください（default は予約済み）")
+        raise HTTPException(422, "インスタンス ID は重複しない英数字、_、- で指定してください")
     if instances and (not values.device_plugin or values.device_plugin in MANAGEMENT_PLUGINS):
         raise HTTPException(422, "同種デバイスの登録には担当デバイスの種類を指定してください")
     if any(plugin not in MANAGEMENT_PLUGINS for plugin in managers.values()):
         raise HTTPException(422, "管理プラグインの種類が無効です")
     return {"node_id": node_id, "parent_ws": parent_ws, "device_plugin": values.device_plugin,
-            "default_device": default_device, "device_instances": instances, "management_plugins": managers, **history}
+            "device_instances": instances, "management_plugins": managers, **history}
 
 
 class Operation(BaseModel):
@@ -132,7 +129,6 @@ class Configuration(BaseModel):
     node_id: str
     parent_ws: str = ""
     device_plugin: str = ""
-    default_device: bool | None = None
     device_instances: list[str] | None = None
     management_plugins: dict[str, str] | None = None
     monitor_db: str | None = None
@@ -174,7 +170,7 @@ class Node:
                 bind(lambda: self.monitor_history)
 
     def device_id(self, instance):
-        return self.node_id if instance == "default" else f"{self.node_id}:{instance}"
+        return f"{self.node_id}:{instance}"
 
     @staticmethod
     def instance_status(device):
@@ -267,7 +263,7 @@ class Node:
                     await self.forward_monitors(device_id, values, samples)
         await self.update_state()
 
-    def samples_to_send(self, samples, instance="default"):
+    def samples_to_send(self, samples, instance):
         now = monotonic()
         if not samples:
             return []
@@ -333,7 +329,7 @@ class Node:
                 entry = manifest["entry"]
                 manifest["revision"] = hashlib.sha256(device.assets[entry].encode("utf-8")).hexdigest()
                 device_id = self.device_id(instance)
-                state = self.state["state"] if instance == "default" and len(self.devices) == 1 else self.instance_status(device).value
+                state = self.instance_status(device).value
                 devices[device_id] = {"id": device_id, "connected": True, "plugin": manifest,
                                       "assets": device.assets, "monitors": self.latest.get(instance, {}),
                                       "samples": self.latest_samples.get(instance, []), "state": state}
@@ -354,7 +350,7 @@ class Node:
         return None
 
     async def request(self, device_id, operation, parameters):
-        instance = "default" if device_id == self.node_id else device_id.removeprefix(self.node_id + ":")
+        instance = device_id.removeprefix(self.node_id + ":")
         device = self.devices.get(instance)
         if device and self.node_id and device_id == self.device_id(instance):
             plugin = registrations(self.config)[instance]
@@ -582,8 +578,6 @@ async def child_connection(ws: WebSocket):
                     node.child_states[child_id] = {
                         "state": value["state"], "reason": str(value.get("reason", "")),
                         "changed_at": value.get("changed_at"), "connected": True}
-                    if child_id in node.advertisements.get(child_id, {}):
-                        node.advertisements[child_id][child_id]["state"] = value["state"]
                     await node.update_state()
                     await node.notify_change()
                     await node.publish_monitors()

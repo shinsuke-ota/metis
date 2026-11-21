@@ -14,9 +14,8 @@ button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius
 <label>担当デバイス <select name="device_plugin"><option value="">なし</option></select></label>
 <fieldset>
 <legend>担当デバイスの登録</legend>
-<label><input name="default_device" type="checkbox">既定インスタンス（操作先はノード ID）</label>
-<label>追加インスタンス ID <input name="device_instances" placeholder="例：amaneq-01, amaneq-02"></label>
-<p>追加 ID はカンマで区切ります。すべて上で選んだ同じ種類です。</p>
+<label>インスタンス ID <input name="device_instances" placeholder="例：amaneq-01, amaneq-02"></label>
+<p>インスタンス ID はカンマで区切ります。操作先は「ノード ID:インスタンス ID」です。</p>
 </fieldset>
 <fieldset>
 <legend>管理プラグイン</legend>
@@ -71,7 +70,6 @@ async function load() {
     managementTypes = data.available_management_plugins;
     document.getElementById('add-manager').disabled = !managementTypes.length;
     for (const [id, type] of Object.entries(data.management_plugins)) addManager(id, type);
-    form.elements.default_device.checked = data.default_device;
     form.elements.device_instances.value = data.device_instances.join(', ');
     for (const name of data.available_plugins) {
       if (managementTypes.includes(name) && name !== data.device_plugin) continue;
@@ -90,7 +88,6 @@ form.addEventListener('submit', async event => {
   message.textContent = '保存中…';
   try {
     const dataToSave = Object.fromEntries(new FormData(form));
-    dataToSave.default_device = form.elements.default_device.checked;
     dataToSave.device_instances = dataToSave.device_instances.split(',').map(id => id.trim()).filter(Boolean);
     const entries = Array.from(managers.children, row => [row.querySelector('input').value.trim(), row.querySelector('select').value]);
     if (new Set(entries.map(([id]) => id)).size !== entries.length) throw new Error('管理インスタンス ID が重複しています');
