@@ -101,10 +101,24 @@ class Node:
                 "self": "healthy" if self.node_id else "unknown",
                 "device": self.device_status(), "children": self.child_states}
 
+    def reconnected_via(self, device_id):
+        for child_id, advertised in self.advertisements.items():
+            if child_id != device_id and child_id in self.children and advertised.get(device_id, {}).get("connected"):
+                return child_id
+        return None
+
     async def update_state(self):
-        children = {key: {"state": info["state"] if info["connected"] else "unknown"}
-                    for key, info in self.child_states.items()}
-        status, reason = evaluate("healthy" if self.node_id else "unknown", self.device_status(), children)
+        children = {
+            key: {"state": info["state"] if info["connected"] else "unknown"}
+            for key, info in self.child_states.items()
+            if info["connected"] or self.reconnected_via(key) is None
+        }
+        status, reason = evaluate(
+            "healthy" if self.node_id else "unknown",
+            self.device_status(),
+            children,
+       )
+    # 以下は従来通り
         if status not in STATES or not isinstance(reason, str):
             status, reason = "unknown", "invalid state policy result"
         if (status, reason) == (self.state["state"], self.state["reason"]):
