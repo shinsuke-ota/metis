@@ -9,6 +9,7 @@ import websockets
 from websockets.exceptions import WebSocketException
 
 from devices.base import BaseDevice, DeviceStatus
+from monitor_history import timestamp
 from .protocol import item_updates, monitor_request
 
 TRANSPORT_ERRORS = (OSError, TimeoutError, WebSocketException, UnicodeError, ValueError)
@@ -103,7 +104,11 @@ class IsegDevice(BaseDevice):
                 break
             if isinstance(payload, dict) and payload.get("trigger") in ("false", "denied", False):
                 raise ConnectionError("iCS2 rejected the read request")
-            values.update(item_updates(payload))
+            received_at, _ = timestamp()
+            for key, item in item_updates(payload):
+                acquired_at, source = timestamp(item.get("t"))
+                values[key] = {**item, "acquired_at": acquired_at if source == "device" else received_at,
+                               "time_source": source}
         return values
 
     async def logout(self, socket, session):
@@ -134,6 +139,35 @@ class IsegDevice(BaseDevice):
                for key, item in self.values.items()):
             return DeviceStatus.WARNING
         return DeviceStatus.HEALTHY
+
+    def monitor_samples(self):
+        """Numeric history samples using canonical units and physical addresses."""
+        if self.status() == DeviceStatus.UNKNOWN:
+            return []
+        metrics = {
+            "Status.voltageMeasure": ("voltage_measured", "V"),
+            "Status.currentMeasure": ("current_measured", "A"),
+            "Control.voltageSet": ("voltage_set", "V"),
+            "Control.currentSet": ("current_set", "A"),
+        }
+        samples = []
+        for (line, address, channel, name), item in self.values.items():
+            if not channel or name not in metrics:
+                continue
+            serial = self.values.get((line, address, "", "Status.serialNumber"), {}).get("v")
+            if serial is None or not str(serial).strip():
+                continue
+            metric, unit = metrics[name]
+            try:
+                value = read_quantity(item, unit)
+            except (KeyError, ValueError, TypeError, OverflowError):
+                continue
+            if math.isfinite(value):
+                samples.append({"namespace": "iseg", "serial_number": str(serial),
+                                "channel_number": channel, "metric": metric, "unit": unit,
+                                "value": value, "acquired_at": item["acquired_at"],
+                                "time_source": item["time_source"]})
+        return samples
 
     def monitors(self):
         modules = {}

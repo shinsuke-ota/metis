@@ -9,6 +9,7 @@ import uuid
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
+from time import monotonic
 from urllib.parse import urlsplit
 
 import websockets
@@ -19,6 +20,7 @@ from pydantic import BaseModel
 from devices.base import DeviceStatus
 from devices.registry import PLUGINS, create_device
 from state_policy import STATES, evaluate
+from monitor_history import SQLiteMonitorHistory, sample_identity
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.getenv("NODE_DB", "node.sqlite3"))
@@ -85,6 +87,15 @@ class Node:
         self.changed = asyncio.Condition()
         self.revision = 0
         self.latest = self.device.monitors() if self.device else {}
+        self.latest_samples = []
+        self.sent_sample_values = {}
+        self.last_sample_send = None
+        self.sample_mode = os.getenv("NODE_MONITOR_MODE", "change")
+        self.sample_interval = float(os.getenv("NODE_MONITOR_INTERVAL", "60"))
+        if self.sample_mode not in ("change", "periodic", "both") or not 0 < self.sample_interval < float("inf"):
+            raise ValueError("Invalid NODE_MONITOR_MODE or NODE_MONITOR_INTERVAL")
+        history_path = os.getenv("NODE_MONITOR_DB")
+        self.monitor_history = SQLiteMonitorHistory(history_path) if history_path else None
         self.child_states = {}  # direct child ID -> last state and connection flag
         self.state = {"state": "unknown", "reason": "not evaluated", "changed_at": None}
 
@@ -154,14 +165,43 @@ class Node:
             observe(self.catalog(), self.node_id)
         values = self.device.monitors()
         await self.update_state()
-        if values == self.latest:
-            return
+        changed = values != self.latest
         self.latest = values
-        await self.notify_change()
+        sample_provider = getattr(self.device, "monitor_samples", None)
+        self.latest_samples = sample_provider() if callable(sample_provider) else []
+        samples = self.samples_to_send(self.latest_samples)
+        if not changed and not samples:
+            return
+        if changed:
+            await self.notify_change()
+        await self.record_samples(samples)
+        await self.forward_monitors(self.node_id, values, samples)
+
+    def samples_to_send(self, samples):
+        now = monotonic()
+        if not samples:
+            return []
+        periodic = self.sample_mode != "change" and (
+            self.last_sample_send is None or now - self.last_sample_send >= self.sample_interval
+        )
+        selected = samples if periodic else [
+            sample for sample in samples if self.sample_mode != "periodic" and
+            self.sent_sample_values.get(sample_identity(sample)) != sample["value"]
+        ]
+        if periodic:
+            self.last_sample_send = now
+        self.sent_sample_values.update((sample_identity(sample), sample["value"]) for sample in selected)
+        return selected
+
+    async def record_samples(self, samples):
+        if self.monitor_history and isinstance(samples, list) and samples:
+            await asyncio.to_thread(self.monitor_history.append, samples)
+
+    async def forward_monitors(self, device_id, values, samples):
         if self.parent:
             try:
-                await self.parent.send(json.dumps({"type": "monitor", "device_id": self.node_id,
-                                                   "monitors": values}))
+                await self.parent.send(json.dumps({"type": "monitor", "device_id": device_id,
+                                                   "monitors": values, "samples": samples}))
             except websockets.exceptions.ConnectionClosed:
                 pass
 
@@ -171,16 +211,28 @@ class Node:
         advertised = self.advertisements.get(child_id, {})
         if device_id not in advertised or not isinstance(values, dict):
             return
-        if advertised[device_id]["monitors"] == values:
+        samples = message.get("samples")
+        samples = samples if isinstance(samples, list) else []
+        changed = advertised[device_id]["monitors"] != values
+        if not changed and not samples:
             return
-        advertised[device_id]["monitors"] = values
-        await self.notify_change()
-        if self.parent:
-            try:
-                await self.parent.send(json.dumps({"type": "monitor", "device_id": device_id,
-                                                   "monitors": values}))
-            except websockets.exceptions.ConnectionClosed:
-                pass
+        if changed:
+            advertised[device_id]["monitors"] = values
+            await self.notify_change()
+        if samples:
+            previous = advertised[device_id].get("samples", [])
+            merged = {}
+            for sample in [*previous, *samples]:
+                if isinstance(sample, dict):
+                    try:
+                        identity = sample_identity(sample)
+                        if all(isinstance(part, str) for part in identity):
+                            merged[identity] = sample
+                    except KeyError:
+                        continue
+            advertised[device_id]["samples"] = list(merged.values())
+        await self.record_samples(samples)
+        await self.forward_monitors(device_id, values, samples)
         await self.publish_monitors()
 
     def catalog(self):
@@ -193,7 +245,7 @@ class Node:
             ).hexdigest()
             devices[self.node_id] = {"id": self.node_id, "connected": True,
                 "plugin": manifest, "assets": self.device.assets,
-                "monitors": self.latest, "state": self.state["state"]}
+                "monitors": self.latest, "samples": self.latest_samples, "state": self.state["state"]}
         for child_id, advertised in self.advertisements.items():
             for device_id, info in advertised.items():
                 # A remembered disconnected route must not hide a live route
@@ -266,7 +318,7 @@ async def upstream():
                     while True:
                         catalog = node.catalog()
                         metadata = {key: {name: value for name, value in info.items()
-                                          if name != "monitors"} for key, info in catalog.items()}
+                                          if name not in ("monitors", "samples")} for key, info in catalog.items()}
                         fingerprint = json.dumps(metadata, sort_keys=True)
                         if fingerprint != previous:
                             await connection.send(json.dumps({"type": "catalog", "devices": catalog}))
@@ -360,6 +412,9 @@ async def put_config(values: Configuration):
     await node.close_device()
     node.device = device
     node.latest = device.monitors() if device else {}
+    node.latest_samples = []
+    node.sent_sample_values.clear()
+    node.last_sample_send = None
     await node.update_state()
     await node.notify_change()
     app.state.upstream_task = asyncio.create_task(upstream()) if node.parent_ws else None
@@ -387,6 +442,9 @@ async def child_connection(ws: WebSocket):
                 advertised = message.get("devices", {})
                 if isinstance(advertised, dict):
                     node.advertisements[child_id] = advertised
+                    for info in advertised.values():
+                        if isinstance(info, dict) and info.get("connected"):
+                            await node.record_samples(info.get("samples"))
                     await node.update_state()
                     await node.notify_change()
                     await node.publish_monitors()
