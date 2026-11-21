@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エッジ時刻デモ</title><style>
+body{font-family:system-ui,sans-serif;background:#eef3f6;color:#172d3a;margin:0;padding:2rem}
+main{max-width:750px;margin:auto}.clock{background:white;border-radius:12px;padding:2rem;box-shadow:0 4px 20px #1232}
+strong{font-variant-numeric:tabular-nums;font-size:clamp(1.3rem,4vw,2.2rem);overflow-wrap:anywhere}
+button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius:6px;cursor:pointer}
+.device-tabs{display:flex;gap:.35rem;overflow-x:auto;border-bottom:2px solid #145780}
+.device-tabs button{flex:none;white-space:nowrap;border-radius:6px 6px 0 0;background:#d7e4ec;color:#172d3a}
+.device-tabs button[aria-selected="true"]{background:#145780;color:white}
+.device-tabs button[data-state="warning"]{border-bottom:4px solid #df9a18}
+.device-tabs button[data-state="critical"]{border-bottom:4px solid #d74444}
+.device-tabs button[data-state="unknown"]{border-bottom:4px solid #77818a}
+.device-tabs button:focus-visible{outline:3px solid #e79c28;outline-offset:-3px}
+.device-panel{padding-top:1rem}
+</style><script type="importmap">{"imports":{"vue":"/static/vue.esm-browser.prod.js"}}</script>
+</head><body><main><h1>エッジ時刻デモ</h1><p><a href="/setup">ノード設定</a></p><div id="app"></div></main>
+<script type="module" src="/static/host.js"></script></body></html>

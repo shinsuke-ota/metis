@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ノード設定</title><style>
+body{font-family:system-ui,sans-serif;background:#eef3f6;color:#172d3a;margin:2rem}
+main{max-width:650px;margin:auto;background:white;padding:2rem;border-radius:12px}
+label{display:block;margin:1.1rem 0}input,select{display:block;width:100%;box-sizing:border-box;padding:.65rem;margin-top:.4rem}
+button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius:6px;cursor:pointer}
+#message{min-height:2em}a{color:#145780}
+</style></head><body><main><h1>ノード設定</h1>
+<p>上位接続先を空欄にすると、このノードがルートになります。</p>
+<form id="config">
+<label>ノード ID <input name="node_id" required pattern="[A-Za-z0-9_-]{1,100}" autocomplete="off"></label>
+<label>上位ノードの WebSocket URL <input name="parent_ws" type="text" placeholder="ws://127.0.0.1:8000/ws/children" autocomplete="off"></label>
+<label>担当デバイス <select name="device_plugin"><option value="">なし</option></select></label>
+<button type="submit">保存して接続</button>
+</form><p id="message" role="status"></p><p><a href="/">デバイス画面へ</a></p></main>
+<script type="module">
+const form = document.getElementById('config');
+const message = document.getElementById('message');
+async function load() {
+  try {
+    const response = await fetch('/api/config', {cache: 'no-store'});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    form.elements.node_id.value = data.node_id;
+    form.elements.parent_ws.value = data.parent_ws;
+    for (const name of data.available_plugins) {
+      const option = document.createElement('option');
+      option.value = option.textContent = name;
+      form.elements.device_plugin.append(option);
+    }
+    form.elements.device_plugin.value = data.device_plugin;
+  } catch (error) { message.textContent = `設定を取得できません: ${error.message}`; }
+}
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  message.textContent = '保存中…';
+  try {
+    const response = await fetch('/api/config', {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(Object.fromEntries(new FormData(form))),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : `HTTP ${response.status}`);
+    message.textContent = '保存しました。接続先の変更を反映しています。';
+  } catch (error) { message.textContent = `保存できません: ${error.message}`; }
+});
+load();
+</script></body></html>

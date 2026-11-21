@@ -1,0 +1,83 @@
+"""Counter summary plugin: explicit sources, including IDs not yet connected."""
+import json
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+
+
+class CounterSummaryDevice:
+    def __init__(self):
+        self.manifest = json.loads((ROOT / "manifest.json").read_text())
+        entry = self.manifest["entry"]
+        self.assets = {entry: (ROOT / "dist" / entry).read_text()}
+        self.sources = []
+        self.items = []
+
+    def restore_settings(self, settings):
+        self.sources = self.validate(settings.get("sources", []))
+
+    def settings(self):
+        return {"sources": self.sources}
+
+    @staticmethod
+    def validate(sources):
+        if not isinstance(sources, list) or len(sources) > 100:
+            raise ValueError("sources must be a list of at most 100 entries")
+        validated = []
+        seen = set()
+        for item in sources:
+            if not isinstance(item, dict) or not set(item) <= {"device_id", "label", "monitor", "count_field", "rate_field"}:
+                raise ValueError("invalid source entry")
+            device_id = item.get("device_id")
+            if not isinstance(device_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", device_id) or device_id in seen:
+                raise ValueError("device_id must be unique and contain letters, digits, _ or -")
+            seen.add(device_id)
+            entry = {"device_id": device_id}
+            for key, default in (("label", device_id), ("monitor", "count"),
+                                 ("count_field", "count"), ("rate_field", "rate")):
+                value = item.get(key, default)
+                if not isinstance(value, str) or not value or len(value) > 100:
+                    raise ValueError(f"invalid {key}")
+                entry[key] = value
+            validated.append(entry)
+        return validated
+
+    async def operate(self, name, parameters):
+        if name != "configure" or set(parameters) != {"sources"}:
+            raise ValueError("unsupported operation")
+        self.sources = self.validate(parameters["sources"])
+        self.items = []  # refreshed from the node catalog after this operation
+        return self.settings()
+
+    def observe(self, catalog, own_id):
+        items = []
+        for source in self.sources:
+            device_id = source["device_id"]
+            info = catalog.get(device_id) if device_id != own_id else None
+            connected = bool(info and info.get("connected"))
+            monitor = info.get("monitors", {}).get(source["monitor"], {}) if info else {}
+            monitor = monitor if isinstance(monitor, dict) else {}
+            items.append({"device_id": device_id, "label": source["label"],
+                          "connected": connected,
+                          "state": info.get("state", "unknown") if connected else "unknown",
+                          "count": monitor.get(source["count_field"]),
+                          "rate": monitor.get(source["rate_field"]),
+                          "available": connected and source["count_field"] in monitor and source["rate_field"] in monitor})
+        self.items = items
+
+    def monitors(self):
+        return {"summary": {"sources": self.sources, "items": self.items}}
+
+    def status(self):
+        if not self.sources or any(not item["connected"] or not item["available"] or item["state"] == "unknown" for item in self.items):
+            return "unknown"
+        if any(item["state"] == "critical" for item in self.items):
+            return "critical"
+        if any(item["state"] == "warning" for item in self.items):
+            return "warning"
+        return "healthy"
+
+
+def create_device():
+    return CounterSummaryDevice()

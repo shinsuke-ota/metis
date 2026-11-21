@@ -1,0 +1,22 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Dependencies
+node_modules/
+
+# Runtime state (one database per node)
+run/
+*.sqlite3
+*.sqlite3-*
+
+# Local logs and editor files
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Keep devices/*/dist/*.js and pnpm-lock.yaml in the repository.
