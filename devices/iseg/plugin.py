@@ -168,7 +168,7 @@ class IsegDevice(BaseDevice):
         self.config = {"url": url, "username": username, "password": password, "lines": list(dict.fromkeys(lines))}
         self.values, self.last_ok, self.error, self.next_poll = {}, None, "", 0
 
-    def configure_channel(self, parameters):
+    def channel_policy(self, parameters):
         serial, channel = self.identity(parameters)
         policy = {}
         for key in ("label", "group"):
@@ -185,7 +185,22 @@ class IsegDevice(BaseDevice):
             low, high = policy[f"{quantity}_min"], policy[f"{quantity}_max"]
             if (low is None) != (high is None) or (low is not None and low > high):
                 raise ValueError("Specify both limits in ascending order")
-        self.channels = {**self.channels, f"{serial}:{channel}": policy}
+        return f"{serial}:{channel}", policy
+
+    def configure_channels(self, parameters):
+        targets, changes = parameters.get("targets"), parameters.get("changes")
+        if not isinstance(targets, list) or not targets or any(not isinstance(target, dict) for target in targets):
+            raise ValueError("変更するチャンネルを選択してください")
+        fields = {"group", *LIMIT_FIELDS}
+        if not isinstance(changes, dict) or not changes or not changes.keys() <= fields:
+            raise ValueError("変更する項目を指定してください")
+        updated = dict(self.channels)
+        for target in targets:
+            serial, channel = self.identity(target)
+            key = f"{serial}:{channel}"
+            _, policy = self.channel_policy({**target, **updated.get(key, {}), **changes})
+            updated[key] = policy
+        self.channels = updated
 
     @staticmethod
     def identity(parameters):
@@ -204,7 +219,11 @@ class IsegDevice(BaseDevice):
                 self.configure(parameters)
                 return {"saved": True}
             if name == "configure_channel":
-                self.configure_channel(parameters)
+                key, policy = self.channel_policy(parameters)
+                self.channels = {**self.channels, key: policy}
+                return {"saved": True}
+            if name == "configure_channels":
+                self.configure_channels(parameters)
                 return {"saved": True}
             if name not in (*SETPOINTS, "set_output"):
                 raise ValueError("Unsupported iseg operation")
