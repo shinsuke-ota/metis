@@ -97,28 +97,27 @@ class Node:
             return "unknown"
 
     def states(self):
+        children = {}
+        for child_id, info in self.child_states.items():
+            via = self.reconnected_via(child_id) if not info["connected"] else None
+            children[child_id] = {**info, "reconnected_via": via,
+                                  "included_in_state": via is None}
         return {"node_id": self.node_id, "state": self.state,
                 "self": "healthy" if self.node_id else "unknown",
-                "device": self.device_status(), "children": self.child_states}
+                "device": self.device_status(), "children": children}
 
     def reconnected_via(self, device_id):
         for child_id, advertised in self.advertisements.items():
-            if child_id != device_id and child_id in self.children and advertised.get(device_id, {}).get("connected"):
+            if child_id != device_id and child_id in self.children and \
+                    advertised.get(device_id, {}).get("connected"):
                 return child_id
         return None
 
     async def update_state(self):
-        children = {
-            key: {"state": info["state"] if info["connected"] else "unknown"}
-            for key, info in self.child_states.items()
-            if info["connected"] or self.reconnected_via(key) is None
-        }
-        status, reason = evaluate(
-            "healthy" if self.node_id else "unknown",
-            self.device_status(),
-            children,
-       )
-    # 以下は従来通り
+        children = {key: {"state": info["state"] if info["connected"] else "unknown"}
+                    for key, info in self.child_states.items()
+                    if info["connected"] or self.reconnected_via(key) is None}
+        status, reason = evaluate("healthy" if self.node_id else "unknown", self.device_status(), children)
         if status not in STATES or not isinstance(reason, str):
             status, reason = "unknown", "invalid state policy result"
         if (status, reason) == (self.state["state"], self.state["reason"]):
@@ -379,6 +378,7 @@ async def child_connection(ws: WebSocket):
                 advertised = message.get("devices", {})
                 if isinstance(advertised, dict):
                     node.advertisements[child_id] = advertised
+                    await node.update_state()
                     await node.notify_change()
                     await node.publish_monitors()
             elif message.get("type") == "monitor":

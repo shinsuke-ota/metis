@@ -81,6 +81,7 @@ curl -X POST http://127.0.0.1:8000/api/devices/A/operations \
 一覧は `counter_summary` の `summary` 監視値として流れ、通常の `/api/devices/A/monitors/summary/events` からも取得できます。対象の設定は A の SQLite に保存し、再起動後にも復元します。未接続・切断中は `unknown` と表示し、受信済みの値があれば最後の値を残します。カウントとレート自体は counter ノードのプロセス再起動後に初期値へ戻ります。ホスト画面や共通 API は counter の監視名・フィールドを知りません。
 
 C1/C2 を A に直結した後で B の下へ付け替えた場合も、A は切断した旧経路の記録より B 経由の接続中の経路を優先します。確認には A と B の `/api/devices` を比較し、A の `/api/states` で直結していた C1/C2 が切断、B が接続中になっていることを確認できます。
+旧経路の子が別の接続中の子を経由して到達できる場合、その切断履歴は A の状態判定から除外されます。`/api/states` の各子には `reconnected_via` と `included_in_state` が表示されます。別経路でも到達できなくなると、旧経路の切断は再び `unknown` の判定対象になります。
 
 counter は初期レート 1 回/秒で動きます。例えば親から C1 のレートを変更します。
 
