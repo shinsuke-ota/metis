@@ -18,7 +18,7 @@ onUnmounted(() => stop?.());
 
 <template>
   <article class="clock">
-    <h2>Example Counter</h2>
+    <h2>Counter</h2>
     <strong>{{ count }}</strong>
     <p><button type="button" @click="increment">Increment</button></p>
   </article>

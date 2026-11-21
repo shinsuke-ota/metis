@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from devices.base import DeviceStatus
 from devices.registry import PLUGINS, create_device
 from state_policy import STATES, evaluate
 
@@ -87,14 +88,13 @@ class Node:
         self.child_states = {}  # direct child ID -> last state and connection flag
         self.state = {"state": "unknown", "reason": "not evaluated", "changed_at": None}
 
-    def device_status(self):
+    def device_status(self) -> DeviceStatus | None:
         if not self.device:
             return None
         try:
-            status = self.device.status() if callable(getattr(self.device, "status", None)) else "unknown"
-            return status if status in STATES else "unknown"
+            return DeviceStatus(self.device.status())
         except Exception:
-            return "unknown"
+            return DeviceStatus.UNKNOWN
 
     def states(self):
         children = {}
@@ -117,7 +117,9 @@ class Node:
         children = {key: {"state": info["state"] if info["connected"] else "unknown"}
                     for key, info in self.child_states.items()
                     if info["connected"] or self.reconnected_via(key) is None}
-        status, reason = evaluate("healthy" if self.node_id else "unknown", self.device_status(), children)
+        device_state = self.device_status()
+        device_input = None if device_state in (None, DeviceStatus.UNDEFINED) else device_state.value
+        status, reason = evaluate("healthy" if self.node_id else "unknown", device_input, children)
         if status not in STATES or not isinstance(reason, str):
             status, reason = "unknown", "invalid state policy result"
         if (status, reason) == (self.state["state"], self.state["reason"]):

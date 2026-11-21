@@ -1,16 +1,12 @@
 """Clock plugin: device behavior and discovery entry point."""
-import json
 from datetime import datetime, timezone
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from devices.base import BaseDevice, DeviceStatus
 
 
-class ClockDevice:
+class ClockDevice(BaseDevice):
     def __init__(self):
-        self.manifest = json.loads((ROOT / "manifest.json").read_text())
-        entry = self.manifest["entry"]
-        self.assets = {entry: (ROOT / "dist" / entry).read_text()}
+        super().__init__(__file__)
 
     async def operate(self, name, parameters):
         if name != "get_time" or parameters:
@@ -23,8 +19,8 @@ class ClockDevice:
     def monitors(self):
         return {"time": self.sample()}
 
-    def status(self):
-        return "healthy"
+    def status(self) -> DeviceStatus:
+        return DeviceStatus.HEALTHY
 
 
 def create_device():

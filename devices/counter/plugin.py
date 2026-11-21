@@ -1,17 +1,13 @@
 """Counter device derived from _template; one instance belongs to one node."""
-import json
 import math
 import time
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from devices.base import BaseDevice, DeviceStatus
 
 
-class CounterDevice:
+class CounterDevice(BaseDevice):
     def __init__(self):
-        self.manifest = json.loads((ROOT / "manifest.json").read_text())
-        entry = self.manifest["entry"]
-        self.assets = {entry: (ROOT / "dist" / entry).read_text()}
+        super().__init__(__file__)
         self.count = 0
         self.rate = 1.0
         self.remainder = 0.0
@@ -43,12 +39,12 @@ class CounterDevice:
     def monitors(self):
         return {"count": {"count": self.count, "rate": self.rate}}
 
-    def status(self):
+    def status(self) -> DeviceStatus:
         if self.rate == 0 or self.rate > 20:
-            return "critical"
+            return DeviceStatus.CRITICAL
         if self.rate < 1 or self.rate > 10:
-            return "warning"
-        return "healthy"
+            return DeviceStatus.WARNING
+        return DeviceStatus.HEALTHY
 
 
 def create_device():

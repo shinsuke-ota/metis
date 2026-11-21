@@ -1,16 +1,12 @@
 """Counter summary plugin: explicit sources, including IDs not yet connected."""
-import json
 import re
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from devices.base import BaseDevice, DeviceStatus
 
 
-class CounterSummaryDevice:
+class CounterSummaryDevice(BaseDevice):
     def __init__(self):
-        self.manifest = json.loads((ROOT / "manifest.json").read_text())
-        entry = self.manifest["entry"]
-        self.assets = {entry: (ROOT / "dist" / entry).read_text()}
+        super().__init__(__file__)
         self.sources = []
         self.items = []
 
@@ -69,14 +65,14 @@ class CounterSummaryDevice:
     def monitors(self):
         return {"summary": {"sources": self.sources, "items": self.items}}
 
-    def status(self):
+    def status(self) -> DeviceStatus:
         if not self.sources or any(not item["connected"] or not item["available"] or item["state"] == "unknown" for item in self.items):
-            return "unknown"
+            return DeviceStatus.UNKNOWN
         if any(item["state"] == "critical" for item in self.items):
-            return "critical"
+            return DeviceStatus.CRITICAL
         if any(item["state"] == "warning" for item in self.items):
-            return "warning"
-        return "healthy"
+            return DeviceStatus.WARNING
+        return DeviceStatus.HEALTHY
 
 
 def create_device():

@@ -1,15 +1,11 @@
 """Example plugin: copy this directory and edit this file for your device."""
-import json
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from devices.base import BaseDevice
 
 
-class ExampleDevice:
+class Device(BaseDevice):
     def __init__(self):
-        self.manifest = json.loads((ROOT / "manifest.json").read_text())
-        entry = self.manifest["entry"]
-        self.assets = {entry: (ROOT / "dist" / entry).read_text()}
+        super().__init__(__file__)
         self.count = 0
 
     async def operate(self, name, parameters):
@@ -23,4 +19,4 @@ class ExampleDevice:
 
 
 def create_device():
-    return ExampleDevice()
+    return Device()
