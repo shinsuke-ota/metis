@@ -6,10 +6,10 @@ const directories = readdirSync('devices', { withFileTypes: true })
   .map(entry => entry.name)
   .filter(name => existsSync(`devices/${name}/plugin.py`) &&
     existsSync(`devices/${name}/manifest.json`) &&
-    existsSync(`devices/${name}/entry.js`));
+    (existsSync(`devices/${name}/Contents.vue`) || existsSync(`devices/${name}/entry.js`)));
 
 if (!directories.length) {
-  console.error('No device plugins with plugin.py, manifest.json and entry.js found');
+  console.error('No device plugins with plugin.py, manifest.json and Contents.vue (or a legacy entry.js) found');
   process.exit(1);
 }
 

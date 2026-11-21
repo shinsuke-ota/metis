@@ -3,7 +3,7 @@
 1. Copy this directory to `devices/example` (or place a Git submodule there).
 2. Set `plugin_id`, `title`, and `entry` in `manifest.json`. The directory name is the name shown by the setup API and must match `[a-z][a-z0-9_]*`.
 3. Keep `plugin.py` as supplied to use the sample counter. For custom behavior, implement async `operate(name, parameters)` and `monitors()` (a mapping of monitor names to JSON values). `BaseDevice` loads the manifest and built UI asset.
-4. Keep the sample Vue component or customize it for your device. Its `entry.js` exports `mount(client)`; `client.request(operation, parameters)` sends an operation and `client.subscribe(monitor, onValue)` returns a cleanup function.
+4. Keep or customize `Contents.vue`. The shared `devices/entry.js` passes the host client as the `client` prop; `client.request(operation, parameters)` sends an operation and `client.subscribe(monitor, onValue)` returns a cleanup function.
 5. From the node project root, run `pnpm install --frozen-lockfile` and `pnpm build`. This builds every installed device plugin. To build only this plugin, use `pnpm build:device example`. Include `dist/example.js` in your plugin repository or build it after checkout.
 6. Restart the node. `/api/config` now lists `example` in `available_plugins`; select it in `/setup`.
 
