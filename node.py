@@ -30,7 +30,13 @@ def load_config():
     with sqlite3.connect(DB_PATH) as db:
         db.execute("CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
         values = dict(db.execute("SELECT key, value FROM config"))
-    return {key: values.get(key, "") for key in ("node_id", "parent_ws", "device_plugin")}
+    defaults = {
+        "node_id": "", "parent_ws": "", "device_plugin": "",
+        "monitor_db": os.getenv("NODE_MONITOR_DB", ""),
+        "monitor_mode": os.getenv("NODE_MONITOR_MODE", "change"),
+        "monitor_interval": os.getenv("NODE_MONITOR_INTERVAL", "60"),
+    }
+    return {key: values.get(key, default) for key, default in defaults.items()}
 
 
 def save_config(values):
@@ -48,7 +54,7 @@ def make_device(name):
     return device
 
 
-def validate_config(values):
+def validate_config(values, current):
     node_id = values.node_id.strip()
     parent_ws = values.parent_ws.strip()
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", node_id):
@@ -59,7 +65,18 @@ def validate_config(values):
         parsed = urlsplit(parent_ws)
         if parsed.scheme not in ("ws", "wss") or not parsed.hostname or parsed.path != "/ws/children" or parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise HTTPException(422, "parent_ws must be ws(s)://host[:port]/ws/children")
-    return {"node_id": node_id, "parent_ws": parent_ws, "device_plugin": values.device_plugin}
+    history = {key: getattr(values, key) if getattr(values, key) is not None else current[key]
+               for key in ("monitor_db", "monitor_mode", "monitor_interval")}
+    history["monitor_db"] = history["monitor_db"].strip()
+    try:
+        interval = float(history["monitor_interval"])
+    except ValueError:
+        interval = 0
+    if history["monitor_mode"] not in ("change", "periodic", "both") or not 0 < interval < float("inf"):
+        raise HTTPException(422, "送信方式と正の送信周期を指定してください")
+    if "\x00" in history["monitor_db"]:
+        raise HTTPException(422, "SQLite ファイルのパスが無効です")
+    return {"node_id": node_id, "parent_ws": parent_ws, "device_plugin": values.device_plugin, **history}
 
 
 class Operation(BaseModel):
@@ -71,6 +88,9 @@ class Configuration(BaseModel):
     node_id: str
     parent_ws: str = ""
     device_plugin: str = ""
+    monitor_db: str | None = None
+    monitor_mode: str | None = None
+    monitor_interval: str | None = None
 
 
 class Node:
@@ -90,11 +110,11 @@ class Node:
         self.latest_samples = []
         self.sent_sample_values = {}
         self.last_sample_send = None
-        self.sample_mode = os.getenv("NODE_MONITOR_MODE", "change")
-        self.sample_interval = float(os.getenv("NODE_MONITOR_INTERVAL", "60"))
+        self.sample_mode = self.config["monitor_mode"]
+        self.sample_interval = float(self.config["monitor_interval"])
         if self.sample_mode not in ("change", "periodic", "both") or not 0 < self.sample_interval < float("inf"):
             raise ValueError("Invalid NODE_MONITOR_MODE or NODE_MONITOR_INTERVAL")
-        history_path = os.getenv("NODE_MONITOR_DB")
+        history_path = self.config["monitor_db"]
         self.monitor_history = SQLiteMonitorHistory(history_path) if history_path else None
         self.child_states = {}  # direct child ID -> last state and connection flag
         self.state = {"state": "unknown", "reason": "not evaluated", "changed_at": None}
@@ -395,7 +415,29 @@ async def get_config():
 
 @app.put("/api/config")
 async def put_config(values: Configuration):
-    changed = validate_config(values)
+    changed = validate_config(values, node.config)
+    history = node.monitor_history
+    if changed["monitor_db"] != node.config["monitor_db"]:
+        try:
+            history = await asyncio.to_thread(SQLiteMonitorHistory, changed["monitor_db"]) if changed["monitor_db"] else None
+        except (sqlite3.Error, OSError, ValueError) as error:
+            raise HTTPException(422, f"監視履歴の SQLite ファイルを開けません: {error}") from None
+    connection_changed = any(changed[key] != node.config[key] for key in ("node_id", "parent_ws", "device_plugin"))
+    timing_changed = any(changed[key] != node.config[key] for key in ("monitor_mode", "monitor_interval", "monitor_db"))
+    def apply_monitor_config():
+        node.monitor_history = history
+        node.sample_mode = changed["monitor_mode"]
+        node.sample_interval = float(changed["monitor_interval"])
+        if timing_changed:
+            node.sent_sample_values.clear()
+            node.last_sample_send = None
+
+    if not connection_changed:
+        save_config(changed)
+        node.config = changed
+        apply_monitor_config()
+        return {**changed, "available_plugins": list(PLUGINS)}
+
     device = make_device(changed["device_plugin"])
     if changed["node_id"] != node.node_id:
         for child in list(node.children.values()):
@@ -407,6 +449,7 @@ async def put_config(values: Configuration):
             await previous_task
     save_config(changed)
     node.config = changed
+    apply_monitor_config()
     node.node_id = changed["node_id"]
     node.parent_ws = changed["parent_ws"]
     await node.close_device()

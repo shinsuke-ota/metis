@@ -12,7 +12,17 @@ button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius
 <label>ノード ID <input name="node_id" required pattern="[A-Za-z0-9_-]{1,100}" autocomplete="off"></label>
 <label>上位ノードの WebSocket URL <input name="parent_ws" type="text" placeholder="ws://127.0.0.1:8000/ws/children" autocomplete="off"></label>
 <label>担当デバイス <select name="device_plugin"><option value="">なし</option></select></label>
-<button type="submit">保存して接続</button>
+<fieldset>
+<legend>監視履歴</legend>
+<label>SQLite ファイル <input name="monitor_db" placeholder="例：monitor.sqlite3" autocomplete="off"></label>
+<p>ノード上のパスを指定します。空欄にすると、このノードでの履歴保存を停止します。</p>
+<label>このノードの監視データの送信方式
+<select name="monitor_mode">
+<option value="change">変化時のみ</option><option value="periodic">一定周期のみ</option><option value="both">変化時＋一定周期</option>
+</select></label>
+<label>送信周期（秒） <input name="monitor_interval" type="number" min="0.001" step="any" required></label>
+</fieldset>
+<button type="submit">設定を保存</button>
 </form><p id="message" role="status"></p><p><a href="/">デバイス画面へ</a></p></main>
 <script type="module">
 const form = document.getElementById('config');
@@ -30,6 +40,9 @@ async function load() {
       form.elements.device_plugin.append(option);
     }
     form.elements.device_plugin.value = data.device_plugin;
+    for (const key of ['monitor_db', 'monitor_mode', 'monitor_interval']) {
+      form.elements[key].value = data[key];
+    }
   } catch (error) { message.textContent = `設定を取得できません: ${error.message}`; }
 }
 form.addEventListener('submit', async event => {
@@ -42,7 +55,7 @@ form.addEventListener('submit', async event => {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : `HTTP ${response.status}`);
-    message.textContent = '保存しました。接続先の変更を反映しています。';
+    message.textContent = '設定を保存しました。';
   } catch (error) { message.textContent = `保存できません: ${error.message}`; }
 });
 load();
