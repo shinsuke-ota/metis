@@ -31,8 +31,11 @@ def read_quantity(item, unit):
 def check_limit(policy, quantity, value):
     minimum = policy.get(f"{quantity}_min")
     maximum = policy.get(f"{quantity}_max")
-    if minimum is None or maximum is None or not minimum <= value <= maximum:
-        raise ValueError(f"Set or check the channel's {quantity} limits first")
+    label, unit = {"voltage": ("電圧", "V"), "current": ("電流", "A")}[quantity]
+    if minimum is None or maximum is None:
+        raise ValueError(f"チャンネル設定で{label}の下限と上限（{unit}）を保存してください")
+    if not minimum <= value <= maximum:
+        raise ValueError(f"{value:g} {unit} は許容範囲（{minimum:g} ～ {maximum:g} {unit}）外です")
 
 
 class IsegDevice(BaseDevice):

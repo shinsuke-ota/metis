@@ -8,6 +8,7 @@ const selected = ref(null);
 const policy = reactive({});
 const drafts = reactive({});
 const feedback = ref('');
+const rowFeedback = reactive({});
 const busy = ref(false);
 const nodeConnected = ref(false);
 let initialized = false;
@@ -39,15 +40,19 @@ function flag(items, key) {
   if (value == null) return '—';
   return ['1', 'true'].includes(String(value).toLowerCase()) ? 'ON' : 'OFF';
 }
-async function request(operation, parameters, success) {
+async function request(operation, parameters, success, rowKey) {
+  const report = message => {
+    if (rowKey) rowFeedback[rowKey] = message;
+    else feedback.value = message;
+  };
   busy.value = true;
-  feedback.value = '';
+  report('処理中…');
   try {
     await props.client.request(operation, parameters);
-    feedback.value = success;
+    report(success);
     return true;
   } catch (error) {
-    feedback.value = '処理を確認できませんでした。接続、許容範囲、実機の状態を確認してください。 ' + error.message;
+    report(error.message);
     return false;
   } finally {
     busy.value = false;
@@ -73,7 +78,7 @@ async function savePolicy() {
 }
 function send(row, operation, value) {
   return request(operation, { serial: row.serial, channel: row.channel, value },
-    '指令が受理されました。設定値と出力状態は監視欄で確認できます。');
+    '指令を受理。監視欄で実機の反映を確認してください。', row.key);
 }
 onMounted(() => {
   unsubscribe = props.client.subscribe('iseg', value => {
@@ -111,24 +116,26 @@ onUnmounted(() => unsubscribe?.());
             <th>出力 / ランプ / トリップ</th><th>操作</th>
           </tr></thead>
           <tbody>
-            <tr v-for="row in rows" :key="row.key">
-              <td>{{ row.settings.label || 'CH ' + row.channel }}<br><small>{{ row.serial || 'S/N 不明' }} · {{ row.location }}</small></td>
+            <tr v-for="row in rows" :key="row.key" style="white-space: nowrap">
+              <td>{{ row.settings.label || 'CH ' + row.channel }} <small>{{ row.serial || 'S/N 不明' }} · {{ row.location }}</small></td>
               <td>{{ display(row.items, 'Control.voltageSet') }} / {{ display(row.items, 'Status.voltageMeasure') }}</td>
               <td>{{ display(row.items, 'Control.currentSet') }} / {{ display(row.items, 'Status.currentMeasure') }}</td>
               <td>{{ flag(row.items, 'Status.on') }} / {{ flag(row.items, 'Status.voltageRamping') }} /
                 {{ flag(row.items, 'Error.currentTrip') }}</td>
-              <td>
-                <form @submit.prevent="send(row, 'set_voltage', Number(drafts[row.key + 'v']))">
-                  <label>V <input v-model="drafts[row.key + 'v']" type="number" step="any" required></label>
+              <td><div style="display: flex; align-items: center; gap: .35rem">
+                <form style="display: inline-flex; align-items: center; gap: .2rem; margin: 0" @submit.prevent="send(row, 'set_voltage', Number(drafts[row.key + 'v']))">
+                  <label>V <input v-model="drafts[row.key + 'v']" type="number" step="any" required style="width: 5em"></label>
                   <button :disabled="busy || !nodeConnected || !state.online || !row.serial">設定</button>
                 </form>
-                <form @submit.prevent="send(row, 'set_current', Number(drafts[row.key + 'a']))">
-                  <label>A <input v-model="drafts[row.key + 'a']" type="number" step="any" required></label>
+                <form style="display: inline-flex; align-items: center; gap: .2rem; margin: 0" @submit.prevent="send(row, 'set_current', Number(drafts[row.key + 'a']))">
+                  <label>A <input v-model="drafts[row.key + 'a']" type="number" step="any" required style="width: 5em"></label>
                   <button :disabled="busy || !nodeConnected || !state.online || !row.serial">設定</button>
                 </form>
                 <button type="button" :disabled="busy || !nodeConnected || !state.online || !row.serial" @click="send(row, 'set_output', true)">ON</button>
                 <button type="button" :disabled="busy || !nodeConnected || !state.online || !row.serial" @click="send(row, 'set_output', false)">OFF</button>
-                <button type="button" :disabled="busy || !nodeConnected || !row.serial" @click="edit(row)">チャンネル設定</button>
+                <button type="button" :disabled="busy || !nodeConnected || !row.serial" @click="edit(row)">詳細</button>
+                <span v-if="rowFeedback[row.key]" role="status">{{ rowFeedback[row.key] }}</span>
+              </div>
               </td>
             </tr>
           </tbody>

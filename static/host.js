@@ -29,7 +29,10 @@ createApp({
                   method: 'POST', headers: {'Content-Type': 'application/json'},
                   body: JSON.stringify({operation, parameters}),
                 });
-                if (!response.ok) throw new Error(response.status);
+                if (!response.ok) {
+                  const error = await response.json().catch(() => null);
+                  throw new Error(typeof error?.detail === 'string' ? error.detail : `HTTP ${response.status}`);
+                }
                 return response.json();
               },
               subscribe(monitor, onValue) {
