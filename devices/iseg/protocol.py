@@ -10,6 +10,7 @@ CHANNEL_ITEMS = (
     "Status.on",
     "Status.voltageRamping",
     "Error.currentTrip",
+    "Setup.delayedTripAction",
 )
 
 

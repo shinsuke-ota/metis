@@ -8,10 +8,24 @@ const selected = ref(null);
 const detailMode = ref(false);
 const checked = ref([]);
 const nameDrafts = reactive({});
-const bulk = reactive({ voltage: false, current: false, grouping: false, naming: false, action: false, label: "", current_action: "none",
+const bulk = reactive({ voltage: false, current: false, grouping: false, naming: false, label: "",
   voltage_min: '', voltage_max: '', current_min: '', current_max: '', group: '' });
 const policy = reactive({});
 const drafts = reactive({});
+const tripDrafts = reactive({});
+const tripActions = {
+  0: '動作なし', 1: 'CH OFF（ランプあり）', 2: 'CH OFF（ランプなし）',
+  3: 'モジュール OFF（ランプなし）', 4: '遅延トリップ無効',
+};
+function tripAction(row) {
+  const value = String(row.items['Setup.delayedTripAction']?.value);
+  return Object.hasOwn(tripActions, value) ? value : '';
+}
+async function saveTripAction(row) {
+  const value = tripDrafts[row.key];
+  if (!tripAction(row) || value == null) return;
+  if (await send(row, 'set_trip_action', Number(value))) delete tripDrafts[row.key];
+}
 const voltageFormat = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 4 });
 const currentFormat = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 3, maximumFractionDigits: 6 });
 const toVolts = { V: 1, kV: 1000 };
@@ -27,6 +41,7 @@ const operationLabels = {
   configure_channels: 'チャンネル一括設定',
   set_voltage: '電圧設定',
   set_current: '電流設定',
+  set_trip_action: 'iseg 遅延トリップ設定',
   set_output: '出力切替',
 };
 
@@ -36,6 +51,7 @@ function logOperation(operation, parameters) {
   if (operation === 'configure_channels') action += ' ' + parameters.targets.length + ' CH';
   if (operation === 'set_voltage') action += ' ' + parameters.value + ' V';
   if (operation === 'set_current') action += ' ' + parameters.value + ' A';
+  if (operation === 'set_trip_action') action += '：' + tripActions[parameters.value];
   if (operation === 'set_output') action += parameters.value ? ' ON' : ' OFF';
   const entry = reactive({
     id: ++logSequence, time: new Date().toLocaleTimeString(), target, action,
@@ -91,7 +107,6 @@ async function saveBulk() {
   }
   if (bulk.grouping) changes.group = bulk.group;
   if (bulk.naming) changes.label = bulk.label;
-  if (bulk.action) changes.current_action = bulk.current_action;
   const targets = checkedRows.value.map(({ serial, channel }) => ({ serial, channel }));
   await request('configure_channels', { targets, changes }, targets.length + ' チャンネルに保存しました。');
 }
@@ -122,7 +137,7 @@ function flag(items, key) {
 }
 function channelState(row) {
   if (!nodeConnected.value || !state.value.online || flag(row.items, 'Status.on') === null) return '不明';
-  if (state.value.overcurrent?.[row.serial + ':' + row.channel] || flag(row.items, 'Error.currentTrip')) return '異常';
+  if (flag(row.items, 'Error.currentTrip')) return '異常';
   if (flag(row.items, 'Status.voltageRamping')) return 'ランプ中';
   return flag(row.items, 'Status.on') ? 'ON' : 'OFF';
 }
@@ -176,7 +191,6 @@ async function saveConnection() {
 function edit(row) {
   detailMode.value = true;
   selected.value = row;
-  policy.current_action = row.settings.current_action ?? 'none';
   for (const key of ['label', 'group', 'voltage_min', 'voltage_max', 'current_min', 'current_max']) {
     const value = row.settings[key];
     policy[key] = value != null && key.startsWith('current_') ? Number((value * 1000).toPrecision(15)) : value ?? '';
@@ -262,7 +276,7 @@ onUnmounted(() => unsubscribe?.());
     </label>
     <template v-if="detailMode">
       <h3>選択チャンネルの一括設定</h3>
-      <form @submit.prevent="saveBulk">
+      <form class="iseg-bulk" @submit.prevent="saveBulk">
         <fieldset v-for="{key, label, unit} in editorFields" :key="key">
           <legend><label><input v-model="bulk[key]" type="checkbox"> {{ label }}の範囲を変更</label></legend>
           <label>下限 ({{ unit }}) <input v-model="bulk[key + '_min']" type="number" step="any"
@@ -270,29 +284,29 @@ onUnmounted(() => unsubscribe?.());
           <label>上限 ({{ unit }}) <input v-model="bulk[key + '_max']" type="number" step="any"
             :disabled="!bulk[key]" :required="bulk[key]"></label>
         </fieldset>
-        <label><input v-model="bulk.grouping" type="checkbox"> グループを変更</label>
-        <input v-model="bulk.group" aria-label="グループ名" :disabled="!bulk.grouping"
-          maxlength="100" placeholder="空欄で未分類">
-        <label><input v-model="bulk.naming" type="checkbox"> 表示名を変更</label>
-        <input v-model="bulk.label" aria-label="表示名" :disabled="!bulk.naming" maxlength="100">
-        <label><input v-model="bulk.action" type="checkbox"> 電流上限超過時の動作を変更</label>
-        <select v-model="bulk.current_action" aria-label="電流上限超過時の動作" :disabled="!bulk.action">
-          <option value="none">動作なし</option><option value="warn">警告</option><option value="off">出力 OFF</option>
-        </select>
-        <button :disabled="busy || !nodeConnected || !checkedRows.length || !(bulk.voltage || bulk.current || bulk.grouping || bulk.naming || bulk.action)">
+        <fieldset>
+          <legend><label><input v-model="bulk.grouping" type="checkbox"> グループを変更</label></legend>
+          <input v-model="bulk.group" aria-label="グループ名" :disabled="!bulk.grouping"
+            maxlength="100" placeholder="空欄で未分類">
+        </fieldset>
+        <fieldset>
+          <legend><label><input v-model="bulk.naming" type="checkbox"> 表示名を変更</label></legend>
+          <input v-model="bulk.label" aria-label="表示名" :disabled="!bulk.naming" maxlength="100">
+        </fieldset>
+        <button :disabled="busy || !nodeConnected || !checkedRows.length || !(bulk.voltage || bulk.current || bulk.grouping || bulk.naming)">
           選択した {{ checkedRows.length }} CH に適用
         </button>
       </form>
       <div class="iseg-table-scroll" tabindex="0" role="region" aria-label="チャンネル詳細">
-      <table class="iseg-data">
+      <table class="iseg-data iseg-detail">
         <thead><tr>
-          <th>選択</th><th>チャンネル</th><th>表示名</th><th>グループ</th><th>電圧範囲 (V)</th><th>電流範囲 (mA)</th><th>電流設定 (mA)</th><th>電流超過時</th><th></th>
+          <th>選択</th><th>チャンネル</th><th>表示名</th><th>グループ</th><th>電圧範囲 (V)</th><th>電流範囲 (mA)</th><th>電流設定 (mA)</th><th>iseg 遅延トリップ</th><th></th>
         </tr></thead>
         <tbody>
           <tr v-for="row in allRows" :key="row.key">
             <td><input v-model="checked" type="checkbox" :value="row.key"
               :aria-label="row.serial + ' CH ' + row.channel"></td>
-            <td>{{ 'CH ' + row.channel }} · {{ row.serial }} / {{ row.location }}</td>
+            <td>CH {{ row.channel }}<small class="iseg-address">{{ row.serial }} · {{ row.location }}</small></td>
             <td><form @submit.prevent="saveName(row)">
               <input :aria-label="row.serial + ' CH ' + row.channel + ' 表示名'"
                 :value="nameDrafts[row.key] ?? row.settings.label ?? ''"
@@ -311,7 +325,16 @@ onUnmounted(() => unsubscribe?.());
                 <button :disabled="busy || !nodeConnected || !state.online || !hasLimits(row, 'current')">設定</button>
               </form>
             </td>
-            <td>{{ ({ warn: '警告', off: '出力 OFF' })[row.settings.current_action] || '動作なし' }}</td>
+            <td>
+              <form v-if="tripAction(row)" class="iseg-setpoint" @submit.prevent="saveTripAction(row)">
+                <select v-model="tripDrafts[row.key]" :aria-label="'CH ' + row.channel + ' iseg 遅延トリップ'">
+                  <option :value="undefined">{{ tripActions[tripAction(row)] }}（現在）</option>
+                  <option v-for="(label, value) in tripActions" :key="value" :value="value">{{ label }}</option>
+                </select>
+                <button :disabled="busy || !nodeConnected || !state.online || tripDrafts[row.key] == null">設定</button>
+              </form>
+              <span v-else>取得不可</span>
+            </td>
             <td><button type="button" @click="edit(row)">編集</button></td>
           </tr>
         </tbody>
@@ -354,9 +377,6 @@ onUnmounted(() => unsubscribe?.());
                     :aria-label="(row.settings.label || 'CH ' + row.channel) + ' 電圧設定 (V)'">
                   <button :disabled="busy || !nodeConnected || !state.online || !row.serial || !hasLimits(row, 'voltage')">設定</button>
                 </form>
-                <span v-if="state.overcurrent?.[row.serial + ':' + row.channel]" role="status">
-                  {{ state.overcurrent[row.serial + ':' + row.channel] }}
-                </span>
                 <small v-if="rowFeedback[row.key]" class="iseg-row-feedback" role="status">{{ rowFeedback[row.key] }}</small>
               </td>
             </tr>
@@ -364,18 +384,13 @@ onUnmounted(() => unsubscribe?.());
         </table>
       </div>
     </section>
-    <form v-if="selected && detailMode" @submit.prevent="savePolicy">
+    <form v-if="selected && detailMode" class="iseg-editor" @submit.prevent="savePolicy">
       <h3>{{ selected.serial }} / CH {{ selected.channel }}</h3>
       <label>グループ <input v-model="policy.group" maxlength="100"></label>
       <label>最低電圧 (V) <input v-model="policy.voltage_min" type="number" step="any"></label>
       <label>最高電圧 (V) <input v-model="policy.voltage_max" type="number" step="any"></label>
       <label>最低電流 (mA) <input v-model="policy.current_min" type="number" step="any"></label>
       <label>最高電流 (mA) <input v-model="policy.current_max" type="number" step="any"></label>
-      <label>電流上限超過時の動作
-        <select v-model="policy.current_action">
-          <option value="none">動作なし</option><option value="warn">警告</option><option value="off">出力 OFF</option>
-        </select>
-      </label>
       <button :disabled="busy || !nodeConnected">保存</button>
       <button type="button" @click="selected = null">閉じる</button>
     </form>

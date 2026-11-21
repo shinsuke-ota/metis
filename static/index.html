@@ -25,6 +25,14 @@ button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius
 .iseg-panel .iseg-setpoint{flex-wrap:nowrap;gap:.3rem}
 .iseg-setpoint input{width:5.7em}
 .iseg-data button{padding:.38rem .6rem}
+.iseg-panel .iseg-bulk,.iseg-panel .iseg-editor{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:.6rem;margin-bottom:1rem}
+.iseg-panel .iseg-bulk fieldset{border:1px solid #bfced6;border-radius:.35rem;min-width:0;margin:0;padding:.4rem .6rem}
+.iseg-bulk input[type=number]{width:5em}
+.iseg-bulk button,.iseg-editor h3{grid-column:1/-1;justify-self:start}
+.iseg-detail td,.iseg-detail button{white-space:nowrap}
+.iseg-detail input[maxlength]{width:8rem}
+.iseg-detail select{max-width:12rem}
+.iseg-address{display:block;color:#4d6573}
 .iseg-row-feedback{display:block;white-space:normal;max-width:11rem}
 @media (max-width:600px){body{padding:1rem}.iseg-panel fieldset{min-width:0;max-width:100%;box-sizing:border-box}
 .iseg-data th,.iseg-data td{padding:.35rem}}
