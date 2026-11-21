@@ -77,3 +77,6 @@ class CounterSummaryDevice(BaseDevice):
 
 def create_device():
     return CounterSummaryDevice()
+
+
+create_device.management_plugin = True

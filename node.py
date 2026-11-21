@@ -24,6 +24,19 @@ from monitor_history import SQLiteMonitorHistory, sample_identity
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.getenv("NODE_DB", "node.sqlite3"))
+MANAGEMENT_PLUGINS = tuple(name for name, factory in PLUGINS.items()
+                           if getattr(factory, "management_plugin", False))
+
+
+def registrations(config):
+    primary = [("default", config["device_plugin"])] if config["device_plugin"] and config["default_device"] else []
+    return dict(primary + [(name, config["device_plugin"]) for name in config["device_instances"]]
+                + list(config["management_plugins"].items()))
+
+
+def public_config(config):
+    return {**config, "available_plugins": list(PLUGINS), "available_management_plugins": MANAGEMENT_PLUGINS}
+
 
 
 def load_config():
@@ -36,19 +49,35 @@ def load_config():
         "monitor_mode": os.getenv("NODE_MONITOR_MODE", "change"),
         "monitor_interval": os.getenv("NODE_MONITOR_INTERVAL", "60"),
     }
-    return {key: values.get(key, default) for key, default in defaults.items()}
+    config = {key: values.get(key, default) for key, default in defaults.items()}
+    config.update(default_device=json.loads(values.get("default_device", "true")),
+                  device_instances=json.loads(values.get("device_instances", "[]")),
+                  management_plugins=json.loads(values.get("management_plugins", "{}")))
+    return config
 
 
 def save_config(values):
     with sqlite3.connect(DB_PATH) as db:
-        db.executemany("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", values.items())
+        db.executemany("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+                       ((key, value if isinstance(value, str) else json.dumps(value))
+                        for key, value in values.items()))
 
 
-def make_device(name):
+def settings_key(plugin, instance):
+    return f"settings:{plugin}" if instance == "default" else f"settings:{plugin}:{instance}"
+
+
+def make_device(name, instance="default"):
     device = create_device(name)
     if device and callable(getattr(device, "restore_settings", None)):
+        key = settings_key(name, instance)
+        settings = getattr(device, "settings", None)
         with sqlite3.connect(DB_PATH) as db:
-            row = db.execute("SELECT value FROM config WHERE key = ?", (f"settings:{name}",)).fetchone()
+            row = db.execute("SELECT value FROM config WHERE key = ?", (key,)).fetchone()
+            if row is None and callable(settings):
+                db.execute("INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)",
+                           (key, json.dumps(settings())))
+                row = db.execute("SELECT value FROM config WHERE key = ?", (key,)).fetchone()
         if row:
             device.restore_settings(json.loads(row[0]))
     return device
@@ -76,7 +105,22 @@ def validate_config(values, current):
         raise HTTPException(422, "送信方式と正の送信周期を指定してください")
     if "\x00" in history["monitor_db"]:
         raise HTTPException(422, "SQLite ファイルのパスが無効です")
-    return {"node_id": node_id, "parent_ws": parent_ws, "device_plugin": values.device_plugin, **history}
+    instances = current["device_instances"] if values.device_instances is None else values.device_instances
+    if values.device_instances is None and not values.device_plugin:
+        instances = []
+    managers = current["management_plugins"] if values.management_plugins is None else values.management_plugins
+    default_device = current["default_device"] if values.default_device is None else values.default_device
+    ids = [*instances, *managers]
+    if len(ids) != len(set(ids)) or any(
+        name == "default" or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", name) for name in ids
+    ):
+        raise HTTPException(422, "インスタンス ID は重複しない英数字、_、- で指定してください（default は予約済み）")
+    if instances and (not values.device_plugin or values.device_plugin in MANAGEMENT_PLUGINS):
+        raise HTTPException(422, "同種デバイスの登録には担当デバイスの種類を指定してください")
+    if any(plugin not in MANAGEMENT_PLUGINS for plugin in managers.values()):
+        raise HTTPException(422, "管理プラグインの種類が無効です")
+    return {"node_id": node_id, "parent_ws": parent_ws, "device_plugin": values.device_plugin,
+            "default_device": default_device, "device_instances": instances, "management_plugins": managers, **history}
 
 
 class Operation(BaseModel):
@@ -88,6 +132,9 @@ class Configuration(BaseModel):
     node_id: str
     parent_ws: str = ""
     device_plugin: str = ""
+    default_device: bool | None = None
+    device_instances: list[str] | None = None
+    management_plugins: dict[str, str] | None = None
     monitor_db: str | None = None
     monitor_mode: str | None = None
     monitor_interval: str | None = None
@@ -98,7 +145,7 @@ class Node:
         self.config = load_config()
         self.node_id = self.config["node_id"]
         self.parent_ws = self.config["parent_ws"]
-        self.device = make_device(self.config["device_plugin"])
+        self.devices = {key: make_device(plugin, key) for key, plugin in registrations(self.config).items()}
         self.children = {}  # child node ID -> WebSocket
         self.advertisements = {}  # child node ID -> visible descendant catalog
         self.parent = None
@@ -106,26 +153,43 @@ class Node:
         self.shutdown_event = asyncio.Event()
         self.changed = asyncio.Condition()
         self.revision = 0
-        self.latest = self.device.monitors() if self.device else {}
-        self.latest_samples = []
+        self.latest = {key: device.monitors() for key, device in self.devices.items()}
+        self.latest_samples = {}
         self.sent_sample_values = {}
-        self.last_sample_send = None
+        self.last_sample_send = {}
         self.sample_mode = self.config["monitor_mode"]
         self.sample_interval = float(self.config["monitor_interval"])
         if self.sample_mode not in ("change", "periodic", "both") or not 0 < self.sample_interval < float("inf"):
             raise ValueError("Invalid NODE_MONITOR_MODE or NODE_MONITOR_INTERVAL")
         history_path = self.config["monitor_db"]
         self.monitor_history = SQLiteMonitorHistory(history_path) if history_path else None
+        self.bind_management_history(self.devices)
         self.child_states = {}  # direct child ID -> last state and connection flag
         self.state = {"state": "unknown", "reason": "not evaluated", "changed_at": None}
 
-    def device_status(self) -> DeviceStatus | None:
-        if not self.device:
-            return None
+    def bind_management_history(self, devices):
+        for device in devices.values():
+            bind = getattr(device, "bind_monitor_history", None)
+            if callable(bind):
+                bind(lambda: self.monitor_history)
+
+    def device_id(self, instance):
+        return self.node_id if instance == "default" else f"{self.node_id}:{instance}"
+
+    @staticmethod
+    def instance_status(device):
         try:
-            return DeviceStatus(self.device.status())
+            return DeviceStatus(device.status())
         except Exception:
             return DeviceStatus.UNKNOWN
+
+    def device_status(self):
+        statuses = {self.instance_status(device) for device in self.devices.values()}
+        for status in (DeviceStatus.CRITICAL, DeviceStatus.UNKNOWN, DeviceStatus.WARNING,
+                       DeviceStatus.HEALTHY, DeviceStatus.UNDEFINED):
+            if status in statuses:
+                return status
+        return None
 
     def states(self):
         children = {}
@@ -164,10 +228,11 @@ class Node:
             except websockets.exceptions.ConnectionClosed:
                 pass
 
-    async def close_device(self):
-        close = getattr(self.device, "close", None)
-        if callable(close):
-            await close()
+    async def close_devices(self, devices=None):
+        for device in (self.devices if devices is None else devices).values():
+            close = getattr(device, "close", None)
+            if callable(close):
+                await close()
 
     async def notify_change(self):
         async with self.changed:
@@ -175,41 +240,46 @@ class Node:
             self.changed.notify_all()
 
     async def publish_monitors(self):
-        if not self.device or not self.node_id:
+        if not self.devices or not self.node_id:
             return
-        tick = getattr(self.device, "tick", None)
-        if callable(tick):
-            tick()
-        observe = getattr(self.device, "observe", None)
-        if callable(observe):
-            observe(self.catalog(), self.node_id)
-        values = self.device.monitors()
+        for instance, device in list(self.devices.items()):
+            if self.devices.get(instance) is not device:
+                continue
+            tick = getattr(device, "tick", None)
+            if callable(tick):
+                tick()
+            observe = getattr(device, "observe", None)
+            device_id = self.device_id(instance)
+            if callable(observe):
+                observe(self.catalog(), device_id)
+            values = device.monitors()
+            changed = values != self.latest.get(instance)
+            self.latest[instance] = values
+            provider = getattr(device, "monitor_samples", None)
+            latest = provider() if callable(provider) else []
+            self.latest_samples[instance] = latest
+            samples = self.samples_to_send(latest, instance)
+            if changed:
+                await self.notify_change()
+            if changed or samples:
+                await self.record_samples(samples)
+                if self.devices.get(instance) is device:
+                    await self.forward_monitors(device_id, values, samples)
         await self.update_state()
-        changed = values != self.latest
-        self.latest = values
-        sample_provider = getattr(self.device, "monitor_samples", None)
-        self.latest_samples = sample_provider() if callable(sample_provider) else []
-        samples = self.samples_to_send(self.latest_samples)
-        if not changed and not samples:
-            return
-        if changed:
-            await self.notify_change()
-        await self.record_samples(samples)
-        await self.forward_monitors(self.node_id, values, samples)
 
-    def samples_to_send(self, samples):
+    def samples_to_send(self, samples, instance="default"):
         now = monotonic()
         if not samples:
             return []
         periodic = self.sample_mode != "change" and (
-            self.last_sample_send is None or now - self.last_sample_send >= self.sample_interval
+            instance not in self.last_sample_send or now - self.last_sample_send[instance] >= self.sample_interval
         )
         selected = samples if periodic else [
             sample for sample in samples if self.sample_mode != "periodic" and
             self.sent_sample_values.get(sample_identity(sample)) != sample["value"]
         ]
         if periodic:
-            self.last_sample_send = now
+            self.last_sample_send[instance] = now
         self.sent_sample_values.update((sample_identity(sample), sample["value"]) for sample in selected)
         return selected
 
@@ -257,20 +327,22 @@ class Node:
 
     def catalog(self):
         devices = {}
-        if self.device and self.node_id:
-            manifest = dict(self.device.manifest)
-            entry = manifest["entry"]
-            manifest["revision"] = hashlib.sha256(
-                self.device.assets[entry].encode("utf-8")
-            ).hexdigest()
-            devices[self.node_id] = {"id": self.node_id, "connected": True,
-                "plugin": manifest, "assets": self.device.assets,
-                "monitors": self.latest, "samples": self.latest_samples, "state": self.state["state"]}
+        if self.node_id:
+            for instance, device in self.devices.items():
+                manifest = dict(device.manifest)
+                entry = manifest["entry"]
+                manifest["revision"] = hashlib.sha256(device.assets[entry].encode("utf-8")).hexdigest()
+                device_id = self.device_id(instance)
+                state = self.state["state"] if instance == "default" and len(self.devices) == 1 else self.instance_status(device).value
+                devices[device_id] = {"id": device_id, "connected": True, "plugin": manifest,
+                                      "assets": device.assets, "monitors": self.latest.get(instance, {}),
+                                      "samples": self.latest_samples.get(instance, []), "state": state}
+        local_ids = set(devices)
         for child_id, advertised in self.advertisements.items():
             for device_id, info in advertised.items():
                 # A remembered disconnected route must not hide a live route
                 # after a device is moved under another child node.
-                if device_id != self.node_id and (device_id not in devices or
+                if device_id not in local_ids and device_id != self.node_id and (device_id not in devices or
                         (not devices[device_id]["connected"] and info["connected"])):
                     devices[device_id] = info
         return devices
@@ -282,11 +354,14 @@ class Node:
         return None
 
     async def request(self, device_id, operation, parameters):
-        if device_id == self.node_id and self.device:
-            result = await self.device.operate(operation, parameters)
-            settings = getattr(self.device, "settings", None)
-            if callable(settings):
-                save_config({f"settings:{self.config['device_plugin']}": json.dumps(settings())})
+        instance = "default" if device_id == self.node_id else device_id.removeprefix(self.node_id + ":")
+        device = self.devices.get(instance)
+        if device and self.node_id and device_id == self.device_id(instance):
+            plugin = registrations(self.config)[instance]
+            result = await device.operate(operation, parameters)
+            settings = getattr(device, "settings", None)
+            if callable(settings) and self.devices.get(instance) is device:
+                save_config({settings_key(plugin, instance): json.dumps(settings())})
             await self.publish_monitors()
             return result
         child = self.route(device_id)
@@ -391,7 +466,7 @@ async def lifespan(app):
         if app.state.upstream_task:
             with suppress(asyncio.CancelledError):
                 await app.state.upstream_task
-        await node.close_device()
+        await node.close_devices()
 
 
 app = FastAPI(title="Configurable node", lifespan=lifespan)
@@ -410,7 +485,7 @@ async def setup_page():
 
 @app.get("/api/config")
 async def get_config():
-    return {**node.config, "available_plugins": list(PLUGINS)}
+    return public_config(node.config)
 
 
 @app.put("/api/config")
@@ -422,7 +497,9 @@ async def put_config(values: Configuration):
             history = await asyncio.to_thread(SQLiteMonitorHistory, changed["monitor_db"]) if changed["monitor_db"] else None
         except (sqlite3.Error, OSError, ValueError) as error:
             raise HTTPException(422, f"監視履歴の SQLite ファイルを開けません: {error}") from None
-    connection_changed = any(changed[key] != node.config[key] for key in ("node_id", "parent_ws", "device_plugin"))
+    before, after = registrations(node.config), registrations(changed)
+    registration_changed = before != after
+    connection_changed = any(changed[key] != node.config[key] for key in ("node_id", "parent_ws"))
     timing_changed = any(changed[key] != node.config[key] for key in ("monitor_mode", "monitor_interval", "monitor_db"))
     def apply_monitor_config():
         node.monitor_history = history
@@ -430,20 +507,23 @@ async def put_config(values: Configuration):
         node.sample_interval = float(changed["monitor_interval"])
         if timing_changed:
             node.sent_sample_values.clear()
-            node.last_sample_send = None
+            node.last_sample_send.clear()
 
-    if not connection_changed:
+    if not connection_changed and not registration_changed:
         save_config(changed)
         node.config = changed
         apply_monitor_config()
-        return {**changed, "available_plugins": list(PLUGINS)}
+        return public_config(changed)
 
-    device = make_device(changed["device_plugin"])
+    retained = {key: device for key, device in node.devices.items() if before[key] == after.get(key)}
+    removed = {key: device for key, device in node.devices.items() if key not in retained}
+    devices = {key: retained[key] if key in retained else make_device(plugin, key)
+               for key, plugin in after.items()}
     if changed["node_id"] != node.node_id:
         for child in list(node.children.values()):
             await child.close(code=1012)
     previous_task = app.state.upstream_task
-    if previous_task:
+    if connection_changed and previous_task:
         previous_task.cancel()
         with suppress(asyncio.CancelledError):
             await previous_task
@@ -452,16 +532,19 @@ async def put_config(values: Configuration):
     apply_monitor_config()
     node.node_id = changed["node_id"]
     node.parent_ws = changed["parent_ws"]
-    await node.close_device()
-    node.device = device
-    node.latest = device.monitors() if device else {}
-    node.latest_samples = []
+    node.devices = devices
+    node.bind_management_history(devices)
+    node.latest = {key: node.latest[key] if key in retained else device.monitors()
+                   for key, device in devices.items()}
+    node.latest_samples = {key: samples for key, samples in node.latest_samples.items() if key in retained}
+    await node.close_devices(removed)
     node.sent_sample_values.clear()
-    node.last_sample_send = None
+    node.last_sample_send.clear()
     await node.update_state()
     await node.notify_change()
-    app.state.upstream_task = asyncio.create_task(upstream()) if node.parent_ws else None
-    return {**changed, "available_plugins": list(PLUGINS)}
+    if connection_changed:
+        app.state.upstream_task = asyncio.create_task(upstream()) if node.parent_ws else None
+    return public_config(changed)
 
 
 @app.websocket("/ws/children")

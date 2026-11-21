@@ -9,7 +9,7 @@ import websockets
 from websockets.exceptions import WebSocketException
 
 from devices.base import BaseDevice, DeviceStatus
-from monitor_history import timestamp
+from monitor_history import join_source_key, timestamp
 from .protocol import item_updates, monitor_request
 
 TRANSPORT_ERRORS = (OSError, TimeoutError, WebSocketException, UnicodeError, ValueError)
@@ -163,8 +163,8 @@ class IsegDevice(BaseDevice):
             except (KeyError, ValueError, TypeError, OverflowError):
                 continue
             if math.isfinite(value):
-                samples.append({"namespace": "iseg", "serial_number": str(serial),
-                                "channel_number": channel, "metric": metric, "unit": unit,
+                samples.append({"namespace": "iseg", "source_key": join_source_key(str(serial), channel),
+                                "metric": metric, "unit": unit,
                                 "value": value, "acquired_at": item["acquired_at"],
                                 "time_source": item["time_source"]})
         return samples
