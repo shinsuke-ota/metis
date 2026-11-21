@@ -7,6 +7,7 @@ const connection = reactive({ url: '', username: '', password: '', lines: '0' })
 const selected = ref(null);
 const detailMode = ref(false);
 const checked = ref([]);
+const nameDrafts = reactive({});
 const bulk = reactive({ voltage: false, current: false, grouping: false, naming: false, action: false, label: "", current_action: "none",
   voltage_min: '', voltage_max: '', current_min: '', current_max: '', group: '' });
 const policy = reactive({});
@@ -63,6 +64,10 @@ const groups = computed(() => {
 
 const allRows = computed(() => [...groups.value.values()].flat().filter(row => row.serial));
 const checkedRows = computed(() => allRows.value.filter(row => checked.value.includes(row.key)));
+function toggleAll(event) {
+  checked.value = event.target.checked ? allRows.value.map(row => row.key) : [];
+}
+
 const editorFields = [
   { key: 'voltage', label: '電圧', unit: 'V' },
   { key: 'current', label: '電流', unit: 'A' },
@@ -89,9 +94,35 @@ function display(items, key) {
   return item ? String(item.value) + (item.unit ? ' ' + item.unit : '') : '—';
 }
 function flag(items, key) {
-  const value = items[key]?.value;
-  if (value == null) return '—';
-  return ['1', 'true'].includes(String(value).toLowerCase()) ? 'ON' : 'OFF';
+  const value = String(items[key]?.value).toLowerCase();
+  if (['1', 'true'].includes(value)) return true;
+  if (['0', 'false'].includes(value)) return false;
+  return null;
+}
+function channelState(row) {
+  if (!nodeConnected.value || !state.value.online || flag(row.items, 'Status.on') === null) return '不明';
+  if (state.value.overcurrent?.[row.serial + ':' + row.channel] || flag(row.items, 'Error.currentTrip')) return '異常';
+  if (flag(row.items, 'Status.voltageRamping')) return 'ランプ中';
+  return flag(row.items, 'Status.on') ? 'ON' : 'OFF';
+}
+const rowColors = { 不明: '#edf1f5', 異常: '#fbe0de', ランプ中: '#fff0cb', ON: '#dcf2e4', OFF: '#fff' };
+
+function canToggle(row) {
+  const output = flag(row.items, 'Status.on');
+  return !busy.value && nodeConnected.value && state.value.online && row.serial && output !== null &&
+    (output || (hasLimits(row, 'voltage') && hasLimits(row, 'current')));
+}
+function toggleOutput(row) {
+  if (canToggle(row)) send(row, 'set_output', !flag(row.items, 'Status.on'));
+}
+async function saveName(row) {
+  const label = nameDrafts[row.key];
+  if (label === undefined) return;
+  if (await request('configure_channels', {
+    targets: [{ serial: row.serial, channel: row.channel }], changes: { label },
+  }, '表示名を保存しました。', row.key)) {
+    delete nameDrafts[row.key];
+  }
 }
 async function request(operation, parameters, success, rowKey) {
   const report = message => {
@@ -130,11 +161,14 @@ function edit(row) {
   }
 }
 async function savePolicy() {
-  const parameters = { ...policy, serial: selected.value.serial, channel: selected.value.channel };
+  const changes = { ...policy };
+  delete changes.label;
   for (const key of ['voltage_min', 'voltage_max', 'current_min', 'current_max']) {
-    parameters[key] = parameters[key] === '' ? null : Number(parameters[key]);
+    changes[key] = changes[key] === '' ? null : Number(changes[key]);
   }
-  if (await request('configure_channel', parameters, 'チャンネル設定を保存しました。')) selected.value = null;
+  if (await request('configure_channels', {
+    targets: [{ serial: selected.value.serial, channel: selected.value.channel }], changes,
+  }, 'チャンネル設定を保存しました。')) selected.value = null;
 }
 function send(row, operation, value) {
   return request(operation, { serial: row.serial, channel: row.channel, value },
@@ -186,9 +220,22 @@ onUnmounted(() => unsubscribe?.());
     </form>
     <p role="status">{{ !nodeConnected ? 'Metis ノード未接続' : state.online ? 'iCS2 接続中' : state.error || 'iCS2 未接続' }}</p>
     <p v-if="feedback" role="status">{{ feedback }}</p>
-    <label>
-      <input v-model="detailMode" type="checkbox" role="switch" @change="selected = null">
-      {{ detailMode ? '詳細モード' : 'モニターモード' }}
+    <div style="display: inline-flex; align-items: center; gap: .5rem">
+      <span>モニター</span>
+      <button type="button" role="switch" aria-label="詳細モード" :aria-checked="detailMode"
+        @click="detailMode = !detailMode; selected = null"
+        :style="{ width: '2.75rem', height: '1.5rem', padding: '.15rem', border: 0, borderRadius: '1rem',
+          display: 'inline-flex', alignItems: 'center', justifyContent: detailMode ? 'flex-end' : 'flex-start',
+          background: detailMode ? '#145375' : '#627786' }">
+        <span aria-hidden="true" style="width: 1.2rem; height: 1.2rem; border-radius: 50%; background: white"></span>
+      </button>
+      <span>詳細</span>
+    </div>
+    <label style="margin-inline-start: 1rem">
+      <input type="checkbox" :disabled="!allRows.length" @change="toggleAll"
+        :checked="allRows.length > 0 && checkedRows.length === allRows.length"
+        :indeterminate.prop="checkedRows.length > 0 && checkedRows.length < allRows.length">
+      全選択
     </label>
     <template v-if="detailMode">
       <h3>選択チャンネルの一括設定</h3>
@@ -222,7 +269,12 @@ onUnmounted(() => unsubscribe?.());
             <td><input v-model="checked" type="checkbox" :value="row.key"
               :aria-label="row.serial + ' CH ' + row.channel"></td>
             <td>{{ 'CH ' + row.channel }} · {{ row.serial }} / {{ row.location }}</td>
-            <td>{{ row.settings.label || '—' }}</td>
+            <td><form @submit.prevent="saveName(row)">
+              <input :aria-label="row.serial + ' CH ' + row.channel + ' 表示名'"
+                :value="nameDrafts[row.key] ?? row.settings.label ?? ''"
+                :disabled="busy || !nodeConnected" maxlength="100"
+                @input="nameDrafts[row.key] = $event.target.value">
+            </form><small v-if="rowFeedback[row.key]" role="status">{{ rowFeedback[row.key] }}</small></td>
             <td>{{ row.settings.group || '未分類' }}</td>
             <td v-for="{ key } in editorFields" :key="key">
               {{ hasLimits(row, key) ? row.settings[key + '_min'] + ' ～ ' + row.settings[key + '_max'] : '未設定' }}
@@ -233,22 +285,31 @@ onUnmounted(() => unsubscribe?.());
         </tbody>
       </table>
     </template>
+    <p v-if="!detailMode">行の色：
+      <span v-for="(color, label) in rowColors" :key="label"
+        :style="{ background: color, padding: '.15rem .4rem', marginInlineEnd: '.25rem', border: '1px solid #bcc8cf' }">{{ label }}</span>
+    </p>
     <section v-for="[group, rows] in (detailMode ? [] : groups)" :key="group">
       <h3>{{ group }}</h3>
       <div style="overflow-x: auto">
         <table>
           <thead><tr>
-            <th>チャンネル</th><th>電圧 設定 / 実測</th><th>電流 設定 / 実測</th>
-            <th>出力 / ランプ / トリップ</th><th>操作</th>
+            <th>選択</th><th>表示名</th><th>電圧 設定 / 実測</th><th>電流 設定 / 実測</th><th>設定</th>
           </tr></thead>
           <tbody>
-            <tr v-for="row in rows" :key="row.key" style="white-space: nowrap">
-              <td>{{ row.settings.label || 'CH ' + row.channel }} <small>{{ row.serial || 'S/N 不明' }} · {{ row.location }}</small></td>
+            <tr v-for="row in rows" :key="row.key"
+              :style="{ background: rowColors[channelState(row)], whiteSpace: 'nowrap' }">
+              <td><input v-model="checked" type="checkbox" :value="row.key" :disabled="!row.serial"
+                :aria-label="'選択: ' + (row.settings.label || 'CH ' + row.channel)"></td>
+              <td>
+                <button type="button" :disabled="!canToggle(row)" @click="toggleOutput(row)"
+                  :aria-label="(row.settings.label || 'CH ' + row.channel) + '、状態: ' + channelState(row)"
+                  :title="channelState(row) + (canToggle(row) ? '。クリックで出力切替' : '')">
+                  {{ row.settings.label || 'CH ' + row.channel }}
+                </button>
+              </td>
               <td>{{ display(row.items, 'Control.voltageSet') }} / {{ display(row.items, 'Status.voltageMeasure') }}</td>
               <td>{{ display(row.items, 'Control.currentSet') }} / {{ display(row.items, 'Status.currentMeasure') }}</td>
-              <td>{{ flag(row.items, 'Status.on') }} / {{ flag(row.items, 'Status.voltageRamping') }} /
-                {{ flag(row.items, 'Error.currentTrip') }}
-                <strong v-if="state.overcurrent?.[row.serial + ':' + row.channel]">{{ state.overcurrent[row.serial + ':' + row.channel] }}</strong></td>
               <td><div style="display: flex; align-items: center; gap: .35rem">
                 <form style="display: inline-flex; align-items: center; gap: .2rem; margin: 0" @submit.prevent="send(row, 'set_voltage', Number(drafts[row.key + 'v']))">
                   <label>V <input v-model="drafts[row.key + 'v']" type="number" step="any" required style="width: 5em"></label>
@@ -258,11 +319,9 @@ onUnmounted(() => unsubscribe?.());
                   <label>A <input v-model="drafts[row.key + 'a']" type="number" step="any" required style="width: 5em"></label>
                   <button :disabled="busy || !nodeConnected || !state.online || !row.serial || !hasLimits(row, 'current')">設定</button>
                 </form>
-                <button type="button" :disabled="busy || !nodeConnected || !state.online || !row.serial || !hasLimits(row, 'voltage') || !hasLimits(row, 'current')" @click="send(row, 'set_output', true)">ON</button>
-                <button type="button" :disabled="busy || !nodeConnected || !state.online || !row.serial" @click="send(row, 'set_output', false)">OFF</button>
-                <button type="button" :disabled="busy || !nodeConnected || !row.serial" @click="edit(row)">
-                  {{ hasLimits(row, 'voltage') && hasLimits(row, 'current') ? '詳細' : '許容範囲を設定' }}
-                </button>
+                <span v-if="state.overcurrent?.[row.serial + ':' + row.channel]" role="status">
+                  {{ state.overcurrent[row.serial + ':' + row.channel] }}
+                </span>
                 <span v-if="rowFeedback[row.key]" role="status">{{ rowFeedback[row.key] }}</span>
               </div>
               </td>
@@ -273,7 +332,6 @@ onUnmounted(() => unsubscribe?.());
     </section>
     <form v-if="selected && detailMode" @submit.prevent="savePolicy">
       <h3>{{ selected.serial }} / CH {{ selected.channel }}</h3>
-      <label>表示名 <input v-model="policy.label" maxlength="100"></label>
       <label>グループ <input v-model="policy.group" maxlength="100"></label>
       <label>最低電圧 (V) <input v-model="policy.voltage_min" type="number" step="any"></label>
       <label>最高電圧 (V) <input v-model="policy.voltage_max" type="number" step="any"></label>
