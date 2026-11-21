@@ -46,6 +46,7 @@ class IsegDevice(BaseDevice):
         self.values = {}
         self.last_ok = None
         self.error = ""
+        self.overcurrent = {}
         self.poll_task = None
         self.next_poll = 0
         self.lock = asyncio.Lock()
@@ -123,14 +124,45 @@ class IsegDevice(BaseDevice):
                         await self.logout(socket, session)
                 self.last_ok = monotonic() if self.values else None
                 self.error = "" if self.values else "No module or channel data received"
+                await self.handle_overcurrent()
             except TRANSPORT_ERRORS:
                 self.last_ok = None
+                self.overcurrent = {}
                 self.error = "iCS2 connection, login, or read failed"
+
+    async def handle_overcurrent(self):
+        alerts = {}
+        for (line, address, channel, name), item in self.values.items():
+            if name != "Status.currentMeasure":
+                continue
+            serial = str(self.values.get((line, address, "", "Status.serialNumber"), {}).get("v", ""))
+            key = f"{serial}:{channel}"
+            policy = self.channels.get(key, {})
+            action, limit = policy.get("current_action", "none"), policy.get("current_max")
+            if action == "none" or limit is None:
+                continue
+            try:
+                measured = read_quantity(item, "A")
+            except (TypeError, ValueError):
+                continue
+            if not math.isfinite(measured) or abs(measured) <= limit:
+                continue
+            alerts[key] = "電流上限超過"
+            output = self.values.get((line, address, channel, "Status.on"), {}).get("v")
+            if action == "off" and str(output).lower() in ("1", "true"):
+                try:
+                    async with asyncio.timeout(4):
+                        await self.write("set_output", {"serial": serial, "channel": channel, "value": False})
+                except (ConnectionError, *TRANSPORT_ERRORS):
+                    alerts[key] += "・OFF 未確認"
+                else:
+                    alerts[key] += "・OFF 指令受理"
+        self.overcurrent = alerts
 
     def status(self):
         if self.last_ok is None or monotonic() - self.last_ok > 12:
             return DeviceStatus.UNKNOWN
-        if any(key[-1] == "Error.currentTrip" and str(item["v"]).lower() in ("1", "true")
+        if self.overcurrent or any(key[-1] == "Error.currentTrip" and str(item["v"]).lower() in ("1", "true")
                for key, item in self.values.items()):
             return DeviceStatus.WARNING
         return DeviceStatus.HEALTHY
@@ -146,7 +178,7 @@ class IsegDevice(BaseDevice):
         return {"iseg": {
             "connection": {key: self.config[key] for key in ("url", "username", "lines")},
             "password_set": bool(self.config["password"]),
-            "policies": self.channels, "modules": list(modules.values()),
+            "policies": self.channels, "modules": list(modules.values()), "overcurrent": self.overcurrent,
             "online": self.status() != DeviceStatus.UNKNOWN, "error": self.error,
         }}
 
@@ -167,6 +199,7 @@ class IsegDevice(BaseDevice):
             password = self.config["password"]
         self.config = {"url": url, "username": username, "password": password, "lines": list(dict.fromkeys(lines))}
         self.values, self.last_ok, self.error, self.next_poll = {}, None, "", 0
+        self.overcurrent = {}
 
     def channel_policy(self, parameters):
         serial, channel = self.identity(parameters)
@@ -185,13 +218,19 @@ class IsegDevice(BaseDevice):
             low, high = policy[f"{quantity}_min"], policy[f"{quantity}_max"]
             if (low is None) != (high is None) or (low is not None and low > high):
                 raise ValueError("Specify both limits in ascending order")
+        action = parameters.get("current_action", "none")
+        if action not in ("none", "warn", "off"):
+            raise ValueError("電流超過時の動作を選択してください")
+        if action != "none" and (policy["current_max"] is None or policy["current_max"] < 0):
+            raise ValueError("電流超過時の動作には 0 A 以上の電流上限が必要です")
+        policy["current_action"] = action
         return f"{serial}:{channel}", policy
 
     def configure_channels(self, parameters):
         targets, changes = parameters.get("targets"), parameters.get("changes")
         if not isinstance(targets, list) or not targets or any(not isinstance(target, dict) for target in targets):
             raise ValueError("変更するチャンネルを選択してください")
-        fields = {"group", *LIMIT_FIELDS}
+        fields = {"label", "group", "current_action", *LIMIT_FIELDS}
         if not isinstance(changes, dict) or not changes or not changes.keys() <= fields:
             raise ValueError("変更する項目を指定してください")
         updated = dict(self.channels)

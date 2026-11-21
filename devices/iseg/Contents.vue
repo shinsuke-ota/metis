@@ -5,9 +5,9 @@ const props = defineProps({ client: { type: Object, required: true } });
 const state = ref({ modules: [], policies: {} });
 const connection = reactive({ url: '', username: '', password: '', lines: '0' });
 const selected = ref(null);
-const bulkMode = ref(false);
+const detailMode = ref(false);
 const checked = ref([]);
-const bulk = reactive({ voltage: false, current: false, grouping: false,
+const bulk = reactive({ voltage: false, current: false, grouping: false, naming: false, action: false, label: "", current_action: "none",
   voltage_min: '', voltage_max: '', current_min: '', current_max: '', group: '' });
 const policy = reactive({});
 const drafts = reactive({});
@@ -70,9 +70,6 @@ const editorFields = [
 function hasLimits(row, quantity) {
   return row.settings[quantity + '_min'] != null && row.settings[quantity + '_max'] != null;
 }
-function toggleAll(event) {
-  checked.value = event.target.checked ? allRows.value.map(row => row.key) : [];
-}
 async function saveBulk() {
   const changes = {};
   for (const { key } of editorFields) {
@@ -82,6 +79,8 @@ async function saveBulk() {
     }
   }
   if (bulk.grouping) changes.group = bulk.group;
+  if (bulk.naming) changes.label = bulk.label;
+  if (bulk.action) changes.current_action = bulk.current_action;
   const targets = checkedRows.value.map(({ serial, channel }) => ({ serial, channel }));
   await request('configure_channels', { targets, changes }, targets.length + ' チャンネルに保存しました。');
 }
@@ -123,7 +122,9 @@ async function saveConnection() {
   }, '接続設定を保存しました。')) connection.password = '';
 }
 function edit(row) {
+  detailMode.value = true;
   selected.value = row;
+  policy.current_action = row.settings.current_action ?? 'none';
   for (const key of ['label', 'group', 'voltage_min', 'voltage_max', 'current_min', 'current_max']) {
     policy[key] = row.settings[key] ?? '';
   }
@@ -186,11 +187,11 @@ onUnmounted(() => unsubscribe?.());
     <p role="status">{{ !nodeConnected ? 'Metis ノード未接続' : state.online ? 'iCS2 接続中' : state.error || 'iCS2 未接続' }}</p>
     <p v-if="feedback" role="status">{{ feedback }}</p>
     <label>
-      <input v-model="bulkMode" type="checkbox" role="switch" @change="selected = null">
-      一括設定モード
+      <input v-model="detailMode" type="checkbox" role="switch" @change="selected = null">
+      {{ detailMode ? '詳細モード' : 'モニターモード' }}
     </label>
-    <template v-if="bulkMode">
-      <p>チャンネルを選択し、変更する項目にチェックを入れてください。</p>
+    <template v-if="detailMode">
+      <h3>選択チャンネルの一括設定</h3>
       <form @submit.prevent="saveBulk">
         <fieldset v-for="{key, label, unit} in editorFields" :key="key">
           <legend><label><input v-model="bulk[key]" type="checkbox"> {{ label }}の範囲を変更</label></legend>
@@ -202,31 +203,37 @@ onUnmounted(() => unsubscribe?.());
         <label><input v-model="bulk.grouping" type="checkbox"> グループを変更</label>
         <input v-model="bulk.group" aria-label="グループ名" :disabled="!bulk.grouping"
           maxlength="100" placeholder="空欄で未分類">
-        <button :disabled="busy || !nodeConnected || !checkedRows.length || !(bulk.voltage || bulk.current || bulk.grouping)">
+        <label><input v-model="bulk.naming" type="checkbox"> 表示名を変更</label>
+        <input v-model="bulk.label" aria-label="表示名" :disabled="!bulk.naming" maxlength="100">
+        <label><input v-model="bulk.action" type="checkbox"> 電流上限超過時の動作を変更</label>
+        <select v-model="bulk.current_action" aria-label="電流上限超過時の動作" :disabled="!bulk.action">
+          <option value="none">動作なし</option><option value="warn">警告</option><option value="off">出力 OFF</option>
+        </select>
+        <button :disabled="busy || !nodeConnected || !checkedRows.length || !(bulk.voltage || bulk.current || bulk.grouping || bulk.naming || bulk.action)">
           選択した {{ checkedRows.length }} CH に適用
         </button>
       </form>
       <table style="text-align: left">
         <thead><tr>
-          <th><input type="checkbox" aria-label="全チャンネルを選択" @change="toggleAll"
-            :checked="allRows.length > 0 && checkedRows.length === allRows.length"
-            :indeterminate.prop="checkedRows.length > 0 && checkedRows.length < allRows.length"></th>
-          <th>チャンネル</th><th>グループ</th><th>電圧範囲 (V)</th><th>電流範囲 (A)</th>
+          <th>選択</th><th>チャンネル</th><th>表示名</th><th>グループ</th><th>電圧範囲 (V)</th><th>電流範囲 (A)</th><th>電流超過時</th><th></th>
         </tr></thead>
         <tbody>
           <tr v-for="row in allRows" :key="row.key">
             <td><input v-model="checked" type="checkbox" :value="row.key"
               :aria-label="row.serial + ' CH ' + row.channel"></td>
-            <td>{{ row.settings.label || 'CH ' + row.channel }} · {{ row.serial }} / {{ row.location }}</td>
+            <td>{{ 'CH ' + row.channel }} · {{ row.serial }} / {{ row.location }}</td>
+            <td>{{ row.settings.label || '—' }}</td>
             <td>{{ row.settings.group || '未分類' }}</td>
             <td v-for="{ key } in editorFields" :key="key">
               {{ hasLimits(row, key) ? row.settings[key + '_min'] + ' ～ ' + row.settings[key + '_max'] : '未設定' }}
             </td>
+            <td>{{ ({ warn: '警告', off: '出力 OFF' })[row.settings.current_action] || '動作なし' }}</td>
+            <td><button type="button" @click="edit(row)">編集</button></td>
           </tr>
         </tbody>
       </table>
     </template>
-    <section v-for="[group, rows] in (bulkMode ? [] : groups)" :key="group">
+    <section v-for="[group, rows] in (detailMode ? [] : groups)" :key="group">
       <h3>{{ group }}</h3>
       <div style="overflow-x: auto">
         <table>
@@ -240,7 +247,8 @@ onUnmounted(() => unsubscribe?.());
               <td>{{ display(row.items, 'Control.voltageSet') }} / {{ display(row.items, 'Status.voltageMeasure') }}</td>
               <td>{{ display(row.items, 'Control.currentSet') }} / {{ display(row.items, 'Status.currentMeasure') }}</td>
               <td>{{ flag(row.items, 'Status.on') }} / {{ flag(row.items, 'Status.voltageRamping') }} /
-                {{ flag(row.items, 'Error.currentTrip') }}</td>
+                {{ flag(row.items, 'Error.currentTrip') }}
+                <strong v-if="state.overcurrent?.[row.serial + ':' + row.channel]">{{ state.overcurrent[row.serial + ':' + row.channel] }}</strong></td>
               <td><div style="display: flex; align-items: center; gap: .35rem">
                 <form style="display: inline-flex; align-items: center; gap: .2rem; margin: 0" @submit.prevent="send(row, 'set_voltage', Number(drafts[row.key + 'v']))">
                   <label>V <input v-model="drafts[row.key + 'v']" type="number" step="any" required style="width: 5em"></label>
@@ -263,7 +271,7 @@ onUnmounted(() => unsubscribe?.());
         </table>
       </div>
     </section>
-    <form v-if="selected && !bulkMode" @submit.prevent="savePolicy">
+    <form v-if="selected && detailMode" @submit.prevent="savePolicy">
       <h3>{{ selected.serial }} / CH {{ selected.channel }}</h3>
       <label>表示名 <input v-model="policy.label" maxlength="100"></label>
       <label>グループ <input v-model="policy.group" maxlength="100"></label>
@@ -271,6 +279,11 @@ onUnmounted(() => unsubscribe?.());
       <label>最高電圧 (V) <input v-model="policy.voltage_max" type="number" step="any"></label>
       <label>最低電流 (A) <input v-model="policy.current_min" type="number" step="any"></label>
       <label>最高電流 (A) <input v-model="policy.current_max" type="number" step="any"></label>
+      <label>電流上限超過時の動作
+        <select v-model="policy.current_action">
+          <option value="none">動作なし</option><option value="warn">警告</option><option value="off">出力 OFF</option>
+        </select>
+      </label>
       <button :disabled="busy || !nodeConnected">保存</button>
       <button type="button" @click="selected = null">閉じる</button>
     </form>

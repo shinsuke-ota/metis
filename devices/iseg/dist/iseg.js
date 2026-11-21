@@ -1,29 +1,33 @@
-import { ref as x, reactive as N, computed as z, onMounted as ne, onUnmounted as ue, openBlock as p, createElementBlock as m, createElementVNode as l, Fragment as C, renderList as q, toDisplayString as i, withModifiers as O, createTextVNode as d, withDirectives as r, vModelText as v, createCommentVNode as j, vModelCheckbox as D, defineComponent as ie, h as oe } from "vue";
-const se = { key: 0 }, ae = {
+import { ref as V, reactive as S, computed as W, onMounted as ne, onUnmounted as ue, openBlock as p, createElementBlock as m, createElementVNode as l, Fragment as h, renderList as F, toDisplayString as i, withModifiers as O, createTextVNode as d, withDirectives as s, vModelText as b, createCommentVNode as q, vModelCheckbox as N, vModelSelect as Y, defineComponent as oe, h as ie } from "vue";
+const ae = { key: 0 }, se = {
   key: 1,
   style: { width: "100%", "text-align": "left" }
-}, re = { style: { "white-space": "nowrap" } }, de = { style: { "white-space": "nowrap" } }, pe = ["placeholder"], me = ["disabled"], ve = { role: "status" }, ge = {
+}, re = { style: { "white-space": "nowrap" } }, de = { style: { "white-space": "nowrap" } }, pe = ["placeholder"], me = ["disabled"], ve = { role: "status" }, be = {
   key: 0,
   role: "status"
-}, be = ["onUpdate:modelValue"], fe = ["onUpdate:modelValue", "disabled", "required"], ye = ["onUpdate:modelValue", "disabled", "required"], ce = ["disabled"], ke = ["disabled"], he = { style: { "text-align": "left" } }, xe = ["checked", ".indeterminate"], _e = ["value", "aria-label"], Ce = { style: { "overflow-x": "auto" } }, Ve = { style: { display: "flex", "align-items": "center", gap: ".35rem" } }, Ue = ["onSubmit"], Se = ["onUpdate:modelValue"], Ne = ["disabled"], qe = ["onSubmit"], Me = ["onUpdate:modelValue"], Oe = ["disabled"], Fe = ["disabled", "onClick"], Ae = ["disabled", "onClick"], $e = ["disabled", "onClick"], He = {
+}, ge = ["onUpdate:modelValue"], fe = ["onUpdate:modelValue", "disabled", "required"], ce = ["onUpdate:modelValue", "disabled", "required"], ye = ["disabled"], ke = ["disabled"], xe = ["disabled"], Ve = ["disabled"], _e = { style: { "text-align": "left" } }, Ce = ["value", "aria-label"], he = ["onClick"], Ue = { style: { "overflow-x": "auto" } }, Se = { key: 0 }, Fe = { style: { display: "flex", "align-items": "center", gap: ".35rem" } }, Ne = ["onSubmit"], Oe = ["onUpdate:modelValue"], qe = ["disabled"], Me = ["onSubmit"], $e = ["onUpdate:modelValue"], Ae = ["disabled"], He = ["disabled", "onClick"], Le = ["disabled", "onClick"], je = ["disabled", "onClick"], De = {
   key: 0,
   role: "status"
-}, Le = ["disabled"], je = {
+}, Be = ["disabled"], Re = {
   __name: "Contents",
   props: { client: { type: Object, required: !0 } },
-  setup(B) {
-    const P = B, f = x({ modules: [], policies: {} }), b = N({ url: "", username: "", password: "", lines: "0" }), k = x(null), M = x(!1), F = x([]), s = N({
+  setup(L) {
+    const z = L, g = V({ modules: [], policies: {} }), f = S({ url: "", username: "", password: "", lines: "0" }), k = V(null), _ = V(!1), j = V([]), o = S({
       voltage: !1,
       current: !1,
       grouping: !1,
+      naming: !1,
+      action: !1,
+      label: "",
+      current_action: "none",
       voltage_min: "",
       voltage_max: "",
       current_min: "",
       current_max: "",
       group: ""
-    }), g = N({}), V = N({}), R = x(""), G = x(null), A = x([]);
-    let X = 0;
-    const Y = {
+    }), v = S({}), U = S({}), D = V(""), P = V(null), M = V([]);
+    let Z = 0;
+    const K = {
       configure: "接続設定の保存",
       configure_channel: "チャンネル設定の保存",
       configure_channels: "チャンネル一括設定",
@@ -31,97 +35,94 @@ const se = { key: 0 }, ae = {
       set_current: "電流設定",
       set_output: "出力切替"
     };
-    function Z(n, e) {
+    function w(n, e) {
       const t = e.serial ? e.serial + " / CH " + e.channel : "CC24";
-      let o = Y[n] ?? n;
-      n === "configure_channels" && (o += " " + e.targets.length + " CH"), n === "set_voltage" && (o += " " + e.value + " V"), n === "set_current" && (o += " " + e.value + " A"), n === "set_output" && (o += e.value ? " ON" : " OFF");
-      const u = N({
-        id: ++X,
+      let a = K[n] ?? n;
+      n === "configure_channels" && (a += " " + e.targets.length + " CH"), n === "set_voltage" && (a += " " + e.value + " V"), n === "set_current" && (a += " " + e.value + " A"), n === "set_output" && (a += e.value ? " ON" : " OFF");
+      const u = S({
+        id: ++Z,
         time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
         target: t,
-        action: o,
+        action: a,
         result: "処理中",
         detail: ""
       });
-      return A.value = [u, ...A.value].slice(0, 100), u;
+      return M.value = [u, ...M.value].slice(0, 100), u;
     }
-    const T = N({}), y = x(!1), c = x(!1);
-    let I = !1, J;
-    const Q = z(() => {
+    const B = S({}), c = V(!1), y = V(!1);
+    let G = !1, I;
+    const J = W(() => {
       const n = /* @__PURE__ */ new Map();
-      for (const e of f.value.modules) {
+      for (const e of g.value.modules) {
         const t = String(e["Status.serialNumber"] ?? "");
-        for (const [o, u] of Object.entries(e.channels)) {
-          const a = f.value.policies[t + ":" + o] ?? {}, h = a.group || "未分類";
-          n.has(h) || n.set(h, []), n.get(h).push({
-            key: t + ":" + e.line + ":" + e.address + ":" + o,
+        for (const [a, u] of Object.entries(e.channels)) {
+          const r = g.value.policies[t + ":" + a] ?? {}, x = r.group || "未分類";
+          n.has(x) || n.set(x, []), n.get(x).push({
+            key: t + ":" + e.line + ":" + e.address + ":" + a,
             serial: t,
-            channel: o,
+            channel: a,
             items: u,
-            settings: a,
-            location: e.line + "/" + e.address + "/" + o
+            settings: r,
+            location: e.line + "/" + e.address + "/" + a
           });
         }
       }
       return n;
-    }), U = z(() => [...Q.value.values()].flat().filter((n) => n.serial)), S = z(() => U.value.filter((n) => F.value.includes(n.key))), E = [
+    }), Q = W(() => [...J.value.values()].flat().filter((n) => n.serial)), R = W(() => Q.value.filter((n) => j.value.includes(n.key))), T = [
       { key: "voltage", label: "電圧", unit: "V" },
       { key: "current", label: "電流", unit: "A" }
     ];
-    function _(n, e) {
+    function C(n, e) {
       return n.settings[e + "_min"] != null && n.settings[e + "_max"] != null;
     }
-    function K(n) {
-      F.value = n.target.checked ? U.value.map((e) => e.key) : [];
-    }
-    async function w() {
+    async function ee() {
       const n = {};
-      for (const { key: t } of E)
-        s[t] && (n[t + "_min"] = Number(s[t + "_min"]), n[t + "_max"] = Number(s[t + "_max"]));
-      s.grouping && (n.group = s.group);
-      const e = S.value.map(({ serial: t, channel: o }) => ({ serial: t, channel: o }));
-      await H("configure_channels", { targets: e, changes: n }, e.length + " チャンネルに保存しました。");
+      for (const { key: t } of T)
+        o[t] && (n[t + "_min"] = Number(o[t + "_min"]), n[t + "_max"] = Number(o[t + "_max"]));
+      o.grouping && (n.group = o.group), o.naming && (n.label = o.label), o.action && (n.current_action = o.current_action);
+      const e = R.value.map(({ serial: t, channel: a }) => ({ serial: t, channel: a }));
+      await A("configure_channels", { targets: e, changes: n }, e.length + " チャンネルに保存しました。");
     }
     function $(n, e) {
       const t = n[e];
       return t ? String(t.value) + (t.unit ? " " + t.unit : "") : "—";
     }
-    function W(n, e) {
+    function E(n, e) {
       const t = n[e]?.value;
       return t == null ? "—" : ["1", "true"].includes(String(t).toLowerCase()) ? "ON" : "OFF";
     }
-    async function H(n, e, t, o) {
-      const u = (h) => {
-        o ? T[o] = h : R.value = h;
-      }, a = Z(n, e);
-      y.value = !0, u("処理中…");
+    async function A(n, e, t, a) {
+      const u = (x) => {
+        a ? B[a] = x : D.value = x;
+      }, r = w(n, e);
+      c.value = !0, u("処理中…");
       try {
-        return await P.client.request(n, e), a.result = n.startsWith("set_") ? "指令受理" : "保存完了", a.detail = t, u(t), !0;
-      } catch (h) {
-        return a.result = "エラー", a.detail = h.message, u(h.message), !1;
+        return await z.client.request(n, e), r.result = n.startsWith("set_") ? "指令受理" : "保存完了", r.detail = t, u(t), !0;
+      } catch (x) {
+        return r.result = "エラー", r.detail = x.message, u(x.message), !1;
       } finally {
-        y.value = !1;
+        c.value = !1;
       }
     }
-    async function ee() {
-      await H("configure", {
-        ...b,
-        lines: b.lines.split(",").map((n) => n.trim())
-      }, "接続設定を保存しました。") && (b.password = "");
+    async function le() {
+      await A("configure", {
+        ...f,
+        lines: f.lines.split(",").map((n) => n.trim())
+      }, "接続設定を保存しました。") && (f.password = "");
     }
-    function le(n) {
-      k.value = n;
+    function X(n) {
+      _.value = !0, k.value = n, v.current_action = n.settings.current_action ?? "none";
       for (const e of ["label", "group", "voltage_min", "voltage_max", "current_min", "current_max"])
-        g[e] = n.settings[e] ?? "";
+        v[e] = n.settings[e] ?? "";
     }
     async function te() {
-      const n = { ...g, serial: k.value.serial, channel: k.value.channel };
+      const n = { ...v, serial: k.value.serial, channel: k.value.channel };
       for (const e of ["voltage_min", "voltage_max", "current_min", "current_max"])
         n[e] = n[e] === "" ? null : Number(n[e]);
-      await H("configure_channel", n, "チャンネル設定を保存しました。") && (k.value = null);
+      await A("configure_channel", n, "チャンネル設定を保存しました。") && (k.value = null);
     }
-    function L(n, e, t) {
-      return H(
+    function H(n, e, t) {
+      return A(
         e,
         { serial: n.serial, channel: n.channel, value: t },
         "指令を受理。監視欄で実機の反映を確認してください。",
@@ -129,29 +130,29 @@ const se = { key: 0 }, ae = {
       );
     }
     return ne(() => {
-      J = P.client.subscribe("iseg", (n) => {
-        c.value = !!n.connected, n.connection && (f.value = n, I || (Object.assign(b, n.connection, { lines: n.connection.lines.join(", ") }), I = !0));
+      I = z.client.subscribe("iseg", (n) => {
+        y.value = !!n.connected, n.connection && (g.value = n, G || (Object.assign(f, n.connection, { lines: n.connection.lines.join(", ") }), G = !0));
       });
-    }), ue(() => J?.()), (n, e) => (p(), m("article", null, [
-      e[39] || (e[39] = l("h2", null, "iseg CC24", -1)),
+    }), ue(() => I?.()), (n, e) => (p(), m("article", null, [
+      e[45] || (e[45] = l("h2", null, "iseg CC24", -1)),
       l("button", {
         type: "button",
-        onClick: e[0] || (e[0] = (t) => G.value?.showModal())
+        onClick: e[0] || (e[0] = (t) => P.value?.showModal())
       }, "操作ログ"),
       l("dialog", {
         ref_key: "logDialog",
-        ref: G,
+        ref: P,
         "aria-labelledby": "iseg-operation-log-title",
         style: { width: "min(56rem, 90vw)", "max-height": "75vh", overflow: "auto" }
       }, [
-        e[18] || (e[18] = l("div", { style: { display: "flex", "align-items": "center", "justify-content": "space-between", gap: "1rem" } }, [
+        e[23] || (e[23] = l("div", { style: { display: "flex", "align-items": "center", "justify-content": "space-between", gap: "1rem" } }, [
           l("h3", { id: "iseg-operation-log-title" }, "操作ログ"),
           l("form", { method: "dialog" }, [
             l("button", null, "閉じる")
           ])
         ], -1)),
-        A.value.length ? (p(), m("table", ae, [
-          e[17] || (e[17] = l("thead", null, [
+        M.value.length ? (p(), m("table", se, [
+          e[22] || (e[22] = l("thead", null, [
             l("tr", null, [
               l("th", null, "時刻"),
               l("th", null, "対象"),
@@ -161,7 +162,7 @@ const se = { key: 0 }, ae = {
             ])
           ], -1)),
           l("tbody", null, [
-            (p(!0), m(C, null, q(A.value, (t) => (p(), m("tr", {
+            (p(!0), m(h, null, F(M.value, (t) => (p(), m("tr", {
               key: t.id
             }, [
               l("td", re, i(t.time), 1),
@@ -171,181 +172,221 @@ const se = { key: 0 }, ae = {
               l("td", null, i(t.detail), 1)
             ]))), 128))
           ])
-        ])) : (p(), m("p", se, "この画面からの操作はまだありません。"))
+        ])) : (p(), m("p", ae, "この画面からの操作はまだありません。"))
       ], 512),
       l("form", {
-        onSubmit: O(ee, ["prevent"])
+        onSubmit: O(le, ["prevent"])
       }, [
         l("label", null, [
-          e[19] || (e[19] = d("WebSocket URL ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[1] || (e[1] = (t) => b.url = t),
+          e[24] || (e[24] = d("WebSocket URL ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[1] || (e[1] = (t) => f.url = t),
             placeholder: "ws://cc24:8080",
             required: ""
           }, null, 512), [
             [
-              v,
-              b.url,
+              b,
+              f.url,
               void 0,
               { trim: !0 }
             ]
           ])
         ]),
         l("label", null, [
-          e[20] || (e[20] = d("ユーザー名 ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[2] || (e[2] = (t) => b.username = t),
+          e[25] || (e[25] = d("ユーザー名 ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[2] || (e[2] = (t) => f.username = t),
             autocomplete: "username"
           }, null, 512), [
-            [v, b.username]
+            [b, f.username]
           ])
         ]),
         l("label", null, [
-          e[21] || (e[21] = d("パスワード ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[3] || (e[3] = (t) => b.password = t),
+          e[26] || (e[26] = d("パスワード ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[3] || (e[3] = (t) => f.password = t),
             type: "password",
             autocomplete: "new-password",
-            placeholder: f.value.password_set ? "設定済み" : ""
+            placeholder: g.value.password_set ? "設定済み" : ""
           }, null, 8, pe), [
-            [v, b.password]
+            [b, f.password]
           ])
         ]),
         l("label", null, [
-          e[22] || (e[22] = d("CAN ライン ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[4] || (e[4] = (t) => b.lines = t),
+          e[27] || (e[27] = d("CAN ライン ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[4] || (e[4] = (t) => f.lines = t),
             required: "",
             placeholder: "0, 1"
           }, null, 512), [
-            [v, b.lines]
+            [b, f.lines]
           ])
         ]),
         l("button", {
-          disabled: y.value || !c.value
+          disabled: c.value || !y.value
         }, "接続設定を保存", 8, me)
       ], 32),
-      l("p", ve, i(c.value ? f.value.online ? "iCS2 接続中" : f.value.error || "iCS2 未接続" : "Metis ノード未接続"), 1),
-      R.value ? (p(), m("p", ge, i(R.value), 1)) : j("", !0),
+      l("p", ve, i(y.value ? g.value.online ? "iCS2 接続中" : g.value.error || "iCS2 未接続" : "Metis ノード未接続"), 1),
+      D.value ? (p(), m("p", be, i(D.value), 1)) : q("", !0),
       l("label", null, [
-        r(l("input", {
-          "onUpdate:modelValue": e[5] || (e[5] = (t) => M.value = t),
+        s(l("input", {
+          "onUpdate:modelValue": e[5] || (e[5] = (t) => _.value = t),
           type: "checkbox",
           role: "switch",
           onChange: e[6] || (e[6] = (t) => k.value = null)
         }, null, 544), [
-          [D, M.value]
+          [N, _.value]
         ]),
-        e[23] || (e[23] = d(" 一括設定モード ", -1))
+        d(" " + i(_.value ? "詳細モード" : "モニターモード"), 1)
       ]),
-      M.value ? (p(), m(C, { key: 1 }, [
-        e[29] || (e[29] = l("p", null, "チャンネルを選択し、変更する項目にチェックを入れてください。", -1)),
+      _.value ? (p(), m(h, { key: 1 }, [
+        e[33] || (e[33] = l("h3", null, "選択チャンネルの一括設定", -1)),
         l("form", {
-          onSubmit: O(w, ["prevent"])
+          onSubmit: O(ee, ["prevent"])
         }, [
-          (p(), m(C, null, q(E, ({ key: t, label: o, unit: u }) => l("fieldset", { key: t }, [
+          (p(), m(h, null, F(T, ({ key: t, label: a, unit: u }) => l("fieldset", { key: t }, [
             l("legend", null, [
               l("label", null, [
-                r(l("input", {
-                  "onUpdate:modelValue": (a) => s[t] = a,
+                s(l("input", {
+                  "onUpdate:modelValue": (r) => o[t] = r,
                   type: "checkbox"
-                }, null, 8, be), [
-                  [D, s[t]]
+                }, null, 8, ge), [
+                  [N, o[t]]
                 ]),
-                d(" " + i(o) + "の範囲を変更", 1)
+                d(" " + i(a) + "の範囲を変更", 1)
               ])
             ]),
             l("label", null, [
               d("下限 (" + i(u) + ") ", 1),
-              r(l("input", {
-                "onUpdate:modelValue": (a) => s[t + "_min"] = a,
+              s(l("input", {
+                "onUpdate:modelValue": (r) => o[t + "_min"] = r,
                 type: "number",
                 step: "any",
-                disabled: !s[t],
-                required: s[t]
+                disabled: !o[t],
+                required: o[t]
               }, null, 8, fe), [
-                [v, s[t + "_min"]]
+                [b, o[t + "_min"]]
               ])
             ]),
             l("label", null, [
               d("上限 (" + i(u) + ") ", 1),
-              r(l("input", {
-                "onUpdate:modelValue": (a) => s[t + "_max"] = a,
+              s(l("input", {
+                "onUpdate:modelValue": (r) => o[t + "_max"] = r,
                 type: "number",
                 step: "any",
-                disabled: !s[t],
-                required: s[t]
-              }, null, 8, ye), [
-                [v, s[t + "_max"]]
+                disabled: !o[t],
+                required: o[t]
+              }, null, 8, ce), [
+                [b, o[t + "_max"]]
               ])
             ])
           ])), 64)),
           l("label", null, [
-            r(l("input", {
-              "onUpdate:modelValue": e[7] || (e[7] = (t) => s.grouping = t),
+            s(l("input", {
+              "onUpdate:modelValue": e[7] || (e[7] = (t) => o.grouping = t),
               type: "checkbox"
             }, null, 512), [
-              [D, s.grouping]
+              [N, o.grouping]
             ]),
-            e[24] || (e[24] = d(" グループを変更", -1))
+            e[28] || (e[28] = d(" グループを変更", -1))
           ]),
-          r(l("input", {
-            "onUpdate:modelValue": e[8] || (e[8] = (t) => s.group = t),
+          s(l("input", {
+            "onUpdate:modelValue": e[8] || (e[8] = (t) => o.group = t),
             "aria-label": "グループ名",
-            disabled: !s.grouping,
+            disabled: !o.grouping,
             maxlength: "100",
             placeholder: "空欄で未分類"
-          }, null, 8, ce), [
-            [v, s.group]
+          }, null, 8, ye), [
+            [b, o.group]
+          ]),
+          l("label", null, [
+            s(l("input", {
+              "onUpdate:modelValue": e[9] || (e[9] = (t) => o.naming = t),
+              type: "checkbox"
+            }, null, 512), [
+              [N, o.naming]
+            ]),
+            e[29] || (e[29] = d(" 表示名を変更", -1))
+          ]),
+          s(l("input", {
+            "onUpdate:modelValue": e[10] || (e[10] = (t) => o.label = t),
+            "aria-label": "表示名",
+            disabled: !o.naming,
+            maxlength: "100"
+          }, null, 8, ke), [
+            [b, o.label]
+          ]),
+          l("label", null, [
+            s(l("input", {
+              "onUpdate:modelValue": e[11] || (e[11] = (t) => o.action = t),
+              type: "checkbox"
+            }, null, 512), [
+              [N, o.action]
+            ]),
+            e[30] || (e[30] = d(" 電流上限超過時の動作を変更", -1))
+          ]),
+          s(l("select", {
+            "onUpdate:modelValue": e[12] || (e[12] = (t) => o.current_action = t),
+            "aria-label": "電流上限超過時の動作",
+            disabled: !o.action
+          }, [...e[31] || (e[31] = [
+            l("option", { value: "none" }, "動作なし", -1),
+            l("option", { value: "warn" }, "警告", -1),
+            l("option", { value: "off" }, "出力 OFF", -1)
+          ])], 8, xe), [
+            [Y, o.current_action]
           ]),
           l("button", {
-            disabled: y.value || !c.value || !S.value.length || !(s.voltage || s.current || s.grouping)
-          }, " 選択した " + i(S.value.length) + " CH に適用 ", 9, ke)
+            disabled: c.value || !y.value || !R.value.length || !(o.voltage || o.current || o.grouping || o.naming || o.action)
+          }, " 選択した " + i(R.value.length) + " CH に適用 ", 9, Ve)
         ], 32),
-        l("table", he, [
-          l("thead", null, [
+        l("table", _e, [
+          e[32] || (e[32] = l("thead", null, [
             l("tr", null, [
-              l("th", null, [
-                l("input", {
-                  type: "checkbox",
-                  "aria-label": "全チャンネルを選択",
-                  onChange: K,
-                  checked: U.value.length > 0 && S.value.length === U.value.length,
-                  ".indeterminate": S.value.length > 0 && S.value.length < U.value.length
-                }, null, 40, xe)
-              ]),
-              e[25] || (e[25] = l("th", null, "チャンネル", -1)),
-              e[26] || (e[26] = l("th", null, "グループ", -1)),
-              e[27] || (e[27] = l("th", null, "電圧範囲 (V)", -1)),
-              e[28] || (e[28] = l("th", null, "電流範囲 (A)", -1))
+              l("th", null, "選択"),
+              l("th", null, "チャンネル"),
+              l("th", null, "表示名"),
+              l("th", null, "グループ"),
+              l("th", null, "電圧範囲 (V)"),
+              l("th", null, "電流範囲 (A)"),
+              l("th", null, "電流超過時"),
+              l("th")
             ])
-          ]),
+          ], -1)),
           l("tbody", null, [
-            (p(!0), m(C, null, q(U.value, (t) => (p(), m("tr", {
+            (p(!0), m(h, null, F(Q.value, (t) => (p(), m("tr", {
               key: t.key
             }, [
               l("td", null, [
-                r(l("input", {
-                  "onUpdate:modelValue": e[9] || (e[9] = (o) => F.value = o),
+                s(l("input", {
+                  "onUpdate:modelValue": e[13] || (e[13] = (a) => j.value = a),
                   type: "checkbox",
                   value: t.key,
                   "aria-label": t.serial + " CH " + t.channel
-                }, null, 8, _e), [
-                  [D, F.value]
+                }, null, 8, Ce), [
+                  [N, j.value]
                 ])
               ]),
-              l("td", null, i(t.settings.label || "CH " + t.channel) + " · " + i(t.serial) + " / " + i(t.location), 1),
+              l("td", null, i("CH " + t.channel) + " · " + i(t.serial) + " / " + i(t.location), 1),
+              l("td", null, i(t.settings.label || "—"), 1),
               l("td", null, i(t.settings.group || "未分類"), 1),
-              (p(), m(C, null, q(E, ({ key: o }) => l("td", { key: o }, i(_(t, o) ? t.settings[o + "_min"] + " ～ " + t.settings[o + "_max"] : "未設定"), 1)), 64))
+              (p(), m(h, null, F(T, ({ key: a }) => l("td", { key: a }, i(C(t, a) ? t.settings[a + "_min"] + " ～ " + t.settings[a + "_max"] : "未設定"), 1)), 64)),
+              l("td", null, i({ warn: "警告", off: "出力 OFF" }[t.settings.current_action] || "動作なし"), 1),
+              l("td", null, [
+                l("button", {
+                  type: "button",
+                  onClick: (a) => X(t)
+                }, "編集", 8, he)
+              ])
             ]))), 128))
           ])
         ])
-      ], 64)) : j("", !0),
-      (p(!0), m(C, null, q(M.value ? [] : Q.value, ([t, o]) => (p(), m("section", { key: t }, [
+      ], 64)) : q("", !0),
+      (p(!0), m(h, null, F(_.value ? [] : J.value, ([t, a]) => (p(), m("section", { key: t }, [
         l("h3", null, i(t), 1),
-        l("div", Ce, [
+        l("div", Ue, [
           l("table", null, [
-            e[32] || (e[32] = l("thead", null, [
+            e[36] || (e[36] = l("thead", null, [
               l("tr", null, [
                 l("th", null, "チャンネル"),
                 l("th", null, "電圧 設定 / 実測"),
@@ -355,7 +396,7 @@ const se = { key: 0 }, ae = {
               ])
             ], -1)),
             l("tbody", null, [
-              (p(!0), m(C, null, q(o, (u) => (p(), m("tr", {
+              (p(!0), m(h, null, F(a, (u) => (p(), m("tr", {
                 key: u.key,
                 style: { "white-space": "nowrap" }
               }, [
@@ -365,65 +406,68 @@ const se = { key: 0 }, ae = {
                 ]),
                 l("td", null, i($(u.items, "Control.voltageSet")) + " / " + i($(u.items, "Status.voltageMeasure")), 1),
                 l("td", null, i($(u.items, "Control.currentSet")) + " / " + i($(u.items, "Status.currentMeasure")), 1),
-                l("td", null, i(W(u.items, "Status.on")) + " / " + i(W(u.items, "Status.voltageRamping")) + " / " + i(W(u.items, "Error.currentTrip")), 1),
                 l("td", null, [
-                  l("div", Ve, [
+                  d(i(E(u.items, "Status.on")) + " / " + i(E(u.items, "Status.voltageRamping")) + " / " + i(E(u.items, "Error.currentTrip")) + " ", 1),
+                  g.value.overcurrent?.[u.serial + ":" + u.channel] ? (p(), m("strong", Se, i(g.value.overcurrent[u.serial + ":" + u.channel]), 1)) : q("", !0)
+                ]),
+                l("td", null, [
+                  l("div", Fe, [
                     l("form", {
                       style: { display: "inline-flex", "align-items": "center", gap: ".2rem", margin: "0" },
-                      onSubmit: O((a) => L(u, "set_voltage", Number(V[u.key + "v"])), ["prevent"])
+                      onSubmit: O((r) => H(u, "set_voltage", Number(U[u.key + "v"])), ["prevent"])
                     }, [
                       l("label", null, [
-                        e[30] || (e[30] = d("V ", -1)),
-                        r(l("input", {
-                          "onUpdate:modelValue": (a) => V[u.key + "v"] = a,
+                        e[34] || (e[34] = d("V ", -1)),
+                        s(l("input", {
+                          "onUpdate:modelValue": (r) => U[u.key + "v"] = r,
                           type: "number",
                           step: "any",
                           required: "",
                           style: { width: "5em" }
-                        }, null, 8, Se), [
-                          [v, V[u.key + "v"]]
+                        }, null, 8, Oe), [
+                          [b, U[u.key + "v"]]
                         ])
                       ]),
                       l("button", {
-                        disabled: y.value || !c.value || !f.value.online || !u.serial || !_(u, "voltage")
-                      }, "設定", 8, Ne)
-                    ], 40, Ue),
+                        disabled: c.value || !y.value || !g.value.online || !u.serial || !C(u, "voltage")
+                      }, "設定", 8, qe)
+                    ], 40, Ne),
                     l("form", {
                       style: { display: "inline-flex", "align-items": "center", gap: ".2rem", margin: "0" },
-                      onSubmit: O((a) => L(u, "set_current", Number(V[u.key + "a"])), ["prevent"])
+                      onSubmit: O((r) => H(u, "set_current", Number(U[u.key + "a"])), ["prevent"])
                     }, [
                       l("label", null, [
-                        e[31] || (e[31] = d("A ", -1)),
-                        r(l("input", {
-                          "onUpdate:modelValue": (a) => V[u.key + "a"] = a,
+                        e[35] || (e[35] = d("A ", -1)),
+                        s(l("input", {
+                          "onUpdate:modelValue": (r) => U[u.key + "a"] = r,
                           type: "number",
                           step: "any",
                           required: "",
                           style: { width: "5em" }
-                        }, null, 8, Me), [
-                          [v, V[u.key + "a"]]
+                        }, null, 8, $e), [
+                          [b, U[u.key + "a"]]
                         ])
                       ]),
                       l("button", {
-                        disabled: y.value || !c.value || !f.value.online || !u.serial || !_(u, "current")
-                      }, "設定", 8, Oe)
-                    ], 40, qe),
+                        disabled: c.value || !y.value || !g.value.online || !u.serial || !C(u, "current")
+                      }, "設定", 8, Ae)
+                    ], 40, Me),
                     l("button", {
                       type: "button",
-                      disabled: y.value || !c.value || !f.value.online || !u.serial || !_(u, "voltage") || !_(u, "current"),
-                      onClick: (a) => L(u, "set_output", !0)
-                    }, "ON", 8, Fe),
+                      disabled: c.value || !y.value || !g.value.online || !u.serial || !C(u, "voltage") || !C(u, "current"),
+                      onClick: (r) => H(u, "set_output", !0)
+                    }, "ON", 8, He),
                     l("button", {
                       type: "button",
-                      disabled: y.value || !c.value || !f.value.online || !u.serial,
-                      onClick: (a) => L(u, "set_output", !1)
-                    }, "OFF", 8, Ae),
+                      disabled: c.value || !y.value || !g.value.online || !u.serial,
+                      onClick: (r) => H(u, "set_output", !1)
+                    }, "OFF", 8, Le),
                     l("button", {
                       type: "button",
-                      disabled: y.value || !c.value || !u.serial,
-                      onClick: (a) => le(u)
-                    }, i(_(u, "voltage") && _(u, "current") ? "詳細" : "許容範囲を設定"), 9, $e),
-                    T[u.key] ? (p(), m("span", He, i(T[u.key]), 1)) : j("", !0)
+                      disabled: c.value || !y.value || !u.serial,
+                      onClick: (r) => X(u)
+                    }, i(C(u, "voltage") && C(u, "current") ? "詳細" : "許容範囲を設定"), 9, je),
+                    B[u.key] ? (p(), m("span", De, i(B[u.key]), 1)) : q("", !0)
                   ])
                 ])
               ]))), 128))
@@ -431,87 +475,99 @@ const se = { key: 0 }, ae = {
           ])
         ])
       ]))), 128)),
-      k.value && !M.value ? (p(), m("form", {
+      k.value && _.value ? (p(), m("form", {
         key: 2,
         onSubmit: O(te, ["prevent"])
       }, [
         l("h3", null, i(k.value.serial) + " / CH " + i(k.value.channel), 1),
         l("label", null, [
-          e[33] || (e[33] = d("表示名 ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[10] || (e[10] = (t) => g.label = t),
+          e[37] || (e[37] = d("表示名 ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[14] || (e[14] = (t) => v.label = t),
             maxlength: "100"
           }, null, 512), [
-            [v, g.label]
+            [b, v.label]
           ])
         ]),
         l("label", null, [
-          e[34] || (e[34] = d("グループ ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[11] || (e[11] = (t) => g.group = t),
+          e[38] || (e[38] = d("グループ ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[15] || (e[15] = (t) => v.group = t),
             maxlength: "100"
           }, null, 512), [
-            [v, g.group]
+            [b, v.group]
           ])
         ]),
         l("label", null, [
-          e[35] || (e[35] = d("最低電圧 (V) ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[12] || (e[12] = (t) => g.voltage_min = t),
+          e[39] || (e[39] = d("最低電圧 (V) ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[16] || (e[16] = (t) => v.voltage_min = t),
             type: "number",
             step: "any"
           }, null, 512), [
-            [v, g.voltage_min]
+            [b, v.voltage_min]
           ])
         ]),
         l("label", null, [
-          e[36] || (e[36] = d("最高電圧 (V) ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[13] || (e[13] = (t) => g.voltage_max = t),
+          e[40] || (e[40] = d("最高電圧 (V) ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[17] || (e[17] = (t) => v.voltage_max = t),
             type: "number",
             step: "any"
           }, null, 512), [
-            [v, g.voltage_max]
+            [b, v.voltage_max]
           ])
         ]),
         l("label", null, [
-          e[37] || (e[37] = d("最低電流 (A) ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[14] || (e[14] = (t) => g.current_min = t),
+          e[41] || (e[41] = d("最低電流 (A) ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[18] || (e[18] = (t) => v.current_min = t),
             type: "number",
             step: "any"
           }, null, 512), [
-            [v, g.current_min]
+            [b, v.current_min]
           ])
         ]),
         l("label", null, [
-          e[38] || (e[38] = d("最高電流 (A) ", -1)),
-          r(l("input", {
-            "onUpdate:modelValue": e[15] || (e[15] = (t) => g.current_max = t),
+          e[42] || (e[42] = d("最高電流 (A) ", -1)),
+          s(l("input", {
+            "onUpdate:modelValue": e[19] || (e[19] = (t) => v.current_max = t),
             type: "number",
             step: "any"
           }, null, 512), [
-            [v, g.current_max]
+            [b, v.current_max]
+          ])
+        ]),
+        l("label", null, [
+          e[44] || (e[44] = d("電流上限超過時の動作 ", -1)),
+          s(l("select", {
+            "onUpdate:modelValue": e[20] || (e[20] = (t) => v.current_action = t)
+          }, [...e[43] || (e[43] = [
+            l("option", { value: "none" }, "動作なし", -1),
+            l("option", { value: "warn" }, "警告", -1),
+            l("option", { value: "off" }, "出力 OFF", -1)
+          ])], 512), [
+            [Y, v.current_action]
           ])
         ]),
         l("button", {
-          disabled: y.value || !c.value
-        }, "保存", 8, Le),
+          disabled: c.value || !y.value
+        }, "保存", 8, Be),
         l("button", {
           type: "button",
-          onClick: e[16] || (e[16] = (t) => k.value = null)
+          onClick: e[21] || (e[21] = (t) => k.value = null)
         }, "閉じる")
-      ], 32)) : j("", !0)
+      ], 32)) : q("", !0)
     ]));
   }
 };
-function Be(B) {
-  return ie({
+function Ee(L) {
+  return oe({
     setup() {
-      return () => oe(je, { client: B });
+      return () => ie(Re, { client: L });
     }
   });
 }
 export {
-  Be as mount
+  Ee as mount
 };
