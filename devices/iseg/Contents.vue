@@ -32,6 +32,12 @@ const toVolts = { V: 1, kV: 1000 };
 const toMilliamps = { kA: 1e6, A: 1000, mA: 1, 'µA': .001, 'μA': .001, uA: .001, nA: 1e-6 };
 const amperes = value => Number(value) / 1000;
 const feedback = ref('');
+const settingsDialog = ref(null);
+const theme = ref('dark');
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('metis-hv-theme', theme.value);
+}
 const logDialog = ref(null);
 const operationLog = ref([]);
 let logSequence = 0;
@@ -164,7 +170,7 @@ function channelState(row) {
   if (flag(row.items, 'Status.voltageRamping')) return 'ランプ中';
   return flag(row.items, 'Status.on') ? 'ON' : 'OFF';
 }
-const rowColors = { 不明: '#edf1f5', 異常: '#fbe0de', ランプ中: '#fff0cb', ON: '#dcf2e4', OFF: '#fff' };
+const rowStates = { 不明: 'unknown', 異常: 'fault', ランプ中: 'ramping', ON: 'on', OFF: 'off' };
 
 function canToggle(row) {
   const output = flag(row.items, 'Status.on');
@@ -235,6 +241,7 @@ function send(row, operation, value) {
     '指令を受理。監視欄で実機の反映を確認してください。', row.key);
 }
 onMounted(() => {
+  theme.value = localStorage.getItem('metis-hv-theme') === 'light' ? 'light' : 'dark';
   unsubscribe = props.client.subscribe('iseg', value => {
     nodeConnected.value = Boolean(value.connected);
     if (!value.connection) return;
@@ -249,9 +256,15 @@ onUnmounted(() => unsubscribe?.());
 </script>
 
 <template>
-  <article class="iseg-panel">
-    <h2>iseg CC24</h2>
-    <button type="button" @click="logDialog?.showModal()">操作ログ</button>
+  <article class="iseg-panel hv-panel" :data-theme="theme">
+    <header class="hv-toolbar">
+      <h2>iseg CC24</h2>
+      <div class="hv-actions">
+        <button type="button" @click="toggleTheme">{{ theme === 'dark' ? 'ライト' : 'ダーク' }}</button>
+        <button type="button" aria-label="接続設定" title="接続設定" @click="settingsDialog?.showModal()">⚙</button>
+        <button type="button" @click="logDialog?.showModal()">ログ</button>
+      </div>
+    </header>
     <dialog ref="logDialog" aria-labelledby="iseg-operation-log-title"
       style="width: min(56rem, 90vw); max-height: 75vh; overflow: auto">
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem">
@@ -270,7 +283,12 @@ onUnmounted(() => unsubscribe?.());
         </tbody>
       </table>
     </dialog>
-    <form @submit.prevent="saveConnection">
+    <dialog ref="settingsDialog" :aria-labelledby="tabsId + '-settings'" class="hv-settings">
+      <header class="hv-toolbar">
+        <h3 :id="tabsId + '-settings'">接続設定</h3>
+        <form method="dialog"><button>閉じる</button></form>
+      </header>
+    <form class="hv-settings-form" @submit.prevent="saveConnection">
       <label>WebSocket URL <input v-model.trim="connection.url" placeholder="ws://cc24:8080" required></label>
       <label>ユーザー名 <input v-model="connection.username" autocomplete="username"></label>
       <label>パスワード <input v-model="connection.password" type="password" autocomplete="new-password"
@@ -278,7 +296,9 @@ onUnmounted(() => unsubscribe?.());
       <label>CAN ライン <input v-model="connection.lines" required placeholder="0, 1"></label>
       <button :disabled="busy || !nodeConnected">接続設定を保存</button>
     </form>
-    <p role="status">{{ !nodeConnected ? 'Metis ノード未接続' : state.online ? 'iCS2 接続中' : state.error || 'iCS2 未接続' }}</p>
+    <p v-if="feedback" role="status">{{ feedback }}</p>
+    </dialog>
+    <p class="hv-status" :data-online="nodeConnected && state.online" role="status">{{ !nodeConnected ? 'Metis ノード未接続' : state.online ? 'iCS2 接続中' : state.error || 'iCS2 未接続' }}</p>
     <p v-if="feedback" role="status">{{ feedback }}</p>
     <div style="display: inline-flex; align-items: center; gap: .5rem">
       <span>モニター</span>
@@ -328,8 +348,8 @@ onUnmounted(() => unsubscribe?.());
       </form>
     </template>
     <p v-if="!detailMode">行の色：
-      <span v-for="(color, label) in rowColors" :key="label"
-        :style="{ background: color, padding: '.15rem .4rem', marginInlineEnd: '.25rem', border: '1px solid #bcc8cf' }">{{ label }}</span>
+      <span v-for="(status, label) in rowStates" :key="label"
+        class="hv-legend" :data-state="status">{{ label }}</span>
     </p>
     <component v-for="section in channelSections" :key="section.key"
       :is="section.key === 'unassigned' ? 'details' : 'section'"
@@ -345,7 +365,7 @@ onUnmounted(() => unsubscribe?.());
           <th>選択</th><th>チャンネル</th><th>表示名</th><th>グループ</th><th>電圧範囲 (V)</th><th>電流範囲 (mA)</th><th>電流設定 (mA)</th><th>iseg 遅延トリップ</th><th></th>
         </tr></thead>
         <tbody>
-          <tr v-for="row in section.rows.filter(item => item.serial)" :key="row.key">
+          <tr v-for="row in section.rows.filter(item => item.serial)" :key="row.key" :data-state="rowStates[channelState(row)]">
             <td><input v-model="checked" type="checkbox" :value="row.key"
               :aria-label="row.serial + ' CH ' + row.channel"></td>
             <td>CH {{ row.channel }}<small class="iseg-address">{{ row.serial }} · {{ row.location }}</small></td>
@@ -392,7 +412,7 @@ onUnmounted(() => unsubscribe?.());
           </tr></thead>
           <tbody>
             <tr v-for="row in section.rows" :key="row.key"
-              :style="{ background: rowColors[channelState(row)], whiteSpace: 'nowrap' }">
+              :data-state="rowStates[channelState(row)]" style="white-space: nowrap">
               <td><input v-model="checked" type="checkbox" :value="row.key" :disabled="!row.serial"
                 :aria-label="'選択: ' + (row.settings.label || 'CH ' + row.channel)"></td>
               <td>

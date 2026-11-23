@@ -1,22 +1,25 @@
-import { ref as k, reactive as S, computed as F, useId as He, onMounted as Oe, onUnmounted as De, openBlock as o, createElementBlock as r, createElementVNode as t, Fragment as _, renderList as V, toDisplayString as i, withModifiers as N, createTextVNode as c, withDirectives as d, vModelText as g, createCommentVNode as U, normalizeStyle as ne, unref as K, vModelCheckbox as R, createBlock as Me, resolveDynamicComponent as qe, normalizeClass as Ie, withCtx as $e, vModelSelect as je, defineComponent as Te, h as Le } from "vue";
-const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
+import { ref as h, reactive as U, computed as F, useId as De, onMounted as Me, onUnmounted as qe, openBlock as o, createElementBlock as r, createElementVNode as t, toDisplayString as u, Fragment as k, renderList as V, unref as j, withModifiers as N, createTextVNode as c, withDirectives as d, vModelText as g, createCommentVNode as S, normalizeStyle as Ie, vModelCheckbox as z, createBlock as $e, resolveDynamicComponent as Te, normalizeClass as je, withCtx as Le, vModelSelect as Be, defineComponent as Re, h as Ee } from "vue";
+const Pe = ["data-theme"], We = { class: "hv-toolbar" }, ze = { class: "hv-actions" }, Ge = { key: 0 }, Je = {
   key: 1,
   style: { width: "100%", "text-align": "left" }
-}, Pe = { style: { "white-space": "nowrap" } }, We = { style: { "white-space": "nowrap" } }, ze = ["placeholder"], Ge = ["disabled"], Je = { role: "status" }, Ke = {
+}, Ke = { style: { "white-space": "nowrap" } }, Qe = { style: { "white-space": "nowrap" } }, Xe = ["aria-labelledby"], Ye = { class: "hv-toolbar" }, Ze = ["id"], we = ["placeholder"], et = ["disabled"], tt = {
   key: 0,
   role: "status"
-}, Qe = { style: { display: "inline-flex", "align-items": "center", gap: ".5rem" } }, Xe = ["aria-checked"], Ye = { style: { "margin-inline-start": "1rem" } }, Ze = ["disabled", "checked", ".indeterminate"], we = ["id", "aria-selected", "aria-controls", "tabindex", "onClick"], et = ["onUpdate:modelValue"], tt = ["onUpdate:modelValue", "disabled", "required"], lt = ["onUpdate:modelValue", "disabled", "required"], nt = ["disabled"], at = ["disabled"], st = ["disabled"], ut = { key: 3 }, it = { key: 0 }, ot = ["aria-label"], rt = { class: "iseg-data iseg-detail" }, dt = ["value", "aria-label"], mt = { class: "iseg-address" }, ct = ["onSubmit"], gt = ["aria-label", "value", "disabled", "onInput"], bt = {
+}, lt = ["data-online"], nt = {
   key: 0,
   role: "status"
-}, pt = { class: "iseg-number" }, vt = ["onSubmit"], ft = ["onUpdate:modelValue", "aria-label"], yt = ["disabled"], ht = ["onSubmit"], kt = ["onUpdate:modelValue", "aria-label"], _t = { value: void 0 }, xt = ["value"], Ct = ["disabled"], Vt = { key: 1 }, St = ["onClick"], Ut = ["aria-label"], At = { class: "iseg-data iseg-monitor" }, Ft = ["value", "disabled", "aria-label"], Nt = ["disabled", "onClick", "aria-label", "title"], Ht = { class: "iseg-number" }, Ot = { class: "iseg-number iseg-measured" }, Dt = { class: "iseg-number" }, Mt = { class: "iseg-number iseg-measured" }, qt = ["onSubmit"], It = ["onUpdate:modelValue", "aria-label"], $t = ["disabled"], jt = {
+}, at = { style: { display: "inline-flex", "align-items": "center", gap: ".5rem" } }, st = ["aria-checked"], ut = { style: { "margin-inline-start": "1rem" } }, it = ["disabled", "checked", ".indeterminate"], ot = ["id", "aria-selected", "aria-controls", "tabindex", "onClick"], rt = ["onUpdate:modelValue"], dt = ["onUpdate:modelValue", "disabled", "required"], mt = ["onUpdate:modelValue", "disabled", "required"], ct = ["disabled"], gt = ["disabled"], vt = ["disabled"], bt = { key: 3 }, pt = ["data-state"], ft = { key: 0 }, ht = ["aria-label"], yt = { class: "iseg-data iseg-detail" }, _t = ["data-state"], kt = ["value", "aria-label"], xt = { class: "iseg-address" }, Ct = ["onSubmit"], Vt = ["aria-label", "value", "disabled", "onInput"], St = {
+  key: 0,
+  role: "status"
+}, Ut = { class: "iseg-number" }, At = ["onSubmit"], Ft = ["onUpdate:modelValue", "aria-label"], Nt = ["disabled"], Ht = ["onSubmit"], Ot = ["onUpdate:modelValue", "aria-label"], Dt = { value: void 0 }, Mt = ["value"], qt = ["disabled"], It = { key: 1 }, $t = ["onClick"], Tt = ["aria-label"], jt = { class: "iseg-data iseg-monitor" }, Lt = ["data-state"], Bt = ["value", "disabled", "aria-label"], Rt = ["disabled", "onClick", "aria-label", "title"], Et = { class: "iseg-number" }, Pt = { class: "iseg-number iseg-measured" }, Wt = { class: "iseg-number" }, zt = { class: "iseg-number iseg-measured" }, Gt = ["onSubmit"], Jt = ["onUpdate:modelValue", "aria-label"], Kt = ["disabled"], Qt = {
   key: 0,
   class: "iseg-row-feedback",
   role: "status"
-}, Tt = ["disabled"], Lt = {
+}, Xt = ["disabled"], Yt = {
   __name: "Contents",
   props: { client: { type: Object, required: !0 } },
-  setup(Q) {
-    const ae = Q, v = k({ modules: [], policies: {} }), b = S({ url: "", username: "", password: "", lines: "0" }), x = k(null), y = k(!1), H = k([]), E = S({}), u = S({
+  setup(Z) {
+    const se = Z, v = h({ modules: [], policies: {} }), b = U({ url: "", username: "", password: "", lines: "0" }), x = h(null), y = h(!1), H = h([]), G = U({}), i = U({
       voltage: !1,
       current: !1,
       grouping: !1,
@@ -27,24 +30,28 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
       current_min: "",
       current_max: "",
       group: ""
-    }), p = S({}), O = S({}), $ = S({}), P = {
+    }), p = U({}), O = U({}), L = U({}), J = {
       0: "動作なし",
       1: "CH OFF（ランプあり）",
       2: "CH OFF（ランプなし）",
       3: "モジュール OFF（ランプなし）",
       4: "遅延トリップ無効"
     };
-    function X(n) {
+    function w(n) {
       const e = String(n.items["Setup.delayedTripAction"]?.value);
-      return Object.hasOwn(P, e) ? e : "";
+      return Object.hasOwn(J, e) ? e : "";
     }
     async function be(n) {
-      const e = $[n.key];
-      !X(n) || e == null || await J(n, "set_trip_action", Number(e)) && delete $[n.key];
+      const e = L[n.key];
+      !w(n) || e == null || await Y(n, "set_trip_action", Number(e)) && delete L[n.key];
     }
-    const se = new Intl.NumberFormat("ja-JP", { minimumFractionDigits: 1, maximumFractionDigits: 4 }), ue = new Intl.NumberFormat("ja-JP", { minimumFractionDigits: 3, maximumFractionDigits: 6 }), pe = { V: 1, kV: 1e3 }, ve = { kA: 1e6, A: 1e3, mA: 1, µA: 1e-3, μA: 1e-3, uA: 1e-3, nA: 1e-6 }, Y = (n) => Number(n) / 1e3, Z = k(""), ie = k(null), W = k([]);
-    let fe = 0;
-    const ye = {
+    const ue = new Intl.NumberFormat("ja-JP", { minimumFractionDigits: 1, maximumFractionDigits: 4 }), ie = new Intl.NumberFormat("ja-JP", { minimumFractionDigits: 3, maximumFractionDigits: 6 }), pe = { V: 1, kV: 1e3 }, fe = { kA: 1e6, A: 1e3, mA: 1, µA: 1e-3, μA: 1e-3, uA: 1e-3, nA: 1e-6 }, ee = (n) => Number(n) / 1e3, B = h(""), oe = h(null), D = h("dark");
+    function he() {
+      D.value = D.value === "dark" ? "light" : "dark", localStorage.setItem("metis-hv-theme", D.value);
+    }
+    const re = h(null), K = h([]);
+    let ye = 0;
+    const _e = {
       configure: "接続設定の保存",
       configure_channel: "チャンネル設定の保存",
       configure_channels: "チャンネル一括設定",
@@ -53,23 +60,23 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
       set_trip_action: "iseg 遅延トリップ設定",
       set_output: "出力切替"
     };
-    function he(n, e) {
+    function ke(n, e) {
       const l = e.serial ? e.serial + " / CH " + e.channel : "CC24";
-      let a = ye[n] ?? n;
-      n === "configure_channels" && (a += " " + e.targets.length + " CH"), n === "set_voltage" && (a += " " + e.value + " V"), n === "set_current" && (a += " " + e.value + " A"), n === "set_trip_action" && (a += "：" + P[e.value]), n === "set_output" && (a += e.value ? " ON" : " OFF");
-      const s = S({
-        id: ++fe,
+      let a = _e[n] ?? n;
+      n === "configure_channels" && (a += " " + e.targets.length + " CH"), n === "set_voltage" && (a += " " + e.value + " V"), n === "set_current" && (a += " " + e.value + " A"), n === "set_trip_action" && (a += "：" + J[e.value]), n === "set_output" && (a += e.value ? " ON" : " OFF");
+      const s = U({
+        id: ++ye,
         time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
         target: l,
         action: a,
         result: "処理中",
         detail: ""
       });
-      return W.value = [s, ...W.value].slice(0, 100), s;
+      return K.value = [s, ...K.value].slice(0, 100), s;
     }
-    const j = S({}), h = k(!1), f = k(!1);
-    let oe = !1, re;
-    const T = F(() => {
+    const R = U({}), _ = h(!1), f = h(!1);
+    let de = !1, me;
+    const E = F(() => {
       const n = /* @__PURE__ */ new Map();
       for (const e of v.value.modules) {
         const l = String(e["Status.serialNumber"] ?? "");
@@ -86,150 +93,167 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
         }
       }
       return n;
-    }), z = He(), G = k(""), A = F(() => [...T.value.keys()].filter(Boolean)), D = F(() => A.value.includes(G.value) ? G.value : A.value[0]), ke = F(() => {
+    }), M = De(), Q = h(""), A = F(() => [...E.value.keys()].filter(Boolean)), q = F(() => A.value.includes(Q.value) ? Q.value : A.value[0]), xe = F(() => {
       const n = [];
-      return D.value && n.push({ key: "group", label: D.value, rows: T.value.get(D.value) }), T.value.has("") && n.push({ key: "unassigned", label: "未分類", rows: T.value.get("") }), n;
-    }), de = F(() => A.value.indexOf(D.value));
-    function _e(n) {
-      const e = A.value.length, l = de.value, a = {
+      return q.value && n.push({ key: "group", label: q.value, rows: E.value.get(q.value) }), E.value.has("") && n.push({ key: "unassigned", label: "未分類", rows: E.value.get("") }), n;
+    }), ce = F(() => A.value.indexOf(q.value));
+    function Ce(n) {
+      const e = A.value.length, l = ce.value, a = {
         ArrowLeft: (l - 1 + e) % e,
         ArrowRight: (l + 1) % e,
         Home: 0,
         End: e - 1
       }[n.key];
-      Number.isInteger(a) && (n.preventDefault(), G.value = A.value[a], n.currentTarget.children[a]?.focus());
+      Number.isInteger(a) && (n.preventDefault(), Q.value = A.value[a], n.currentTarget.children[a]?.focus());
     }
-    const M = F(() => [...T.value.values()].flat().filter((n) => n.serial)), q = F(() => M.value.filter((n) => H.value.includes(n.key)));
-    function xe(n) {
-      H.value = n.target.checked ? M.value.map((e) => e.key) : [];
+    const I = F(() => [...E.value.values()].flat().filter((n) => n.serial)), $ = F(() => I.value.filter((n) => H.value.includes(n.key)));
+    function Ve(n) {
+      H.value = n.target.checked ? I.value.map((e) => e.key) : [];
     }
-    const w = [
+    const te = [
       { key: "voltage", label: "電圧", unit: "V" },
       { key: "current", label: "電流", unit: "mA" }
     ];
-    function L(n, e) {
+    function P(n, e) {
       return n.settings[e + "_min"] != null && n.settings[e + "_max"] != null;
     }
-    async function Ce() {
+    async function Se() {
       const n = {};
-      for (const { key: l } of w)
-        if (u[l]) {
-          const a = l === "current" ? Y : Number;
-          n[l + "_min"] = a(u[l + "_min"]), n[l + "_max"] = a(u[l + "_max"]);
+      for (const { key: l } of te)
+        if (i[l]) {
+          const a = l === "current" ? ee : Number;
+          n[l + "_min"] = a(i[l + "_min"]), n[l + "_max"] = a(i[l + "_max"]);
         }
-      u.grouping && (n.group = u.group), u.naming && (n.label = u.label);
-      const e = q.value.map(({ serial: l, channel: a }) => ({ serial: l, channel: a }));
-      await B("configure_channels", { targets: e, changes: n }, e.length + " チャンネルに保存しました。");
+      i.grouping && (n.group = i.group), i.naming && (n.label = i.label);
+      const e = $.value.map(({ serial: l, channel: a }) => ({ serial: l, channel: a }));
+      await W("configure_channels", { targets: e, changes: n }, e.length + " チャンネルに保存しました。");
     }
-    function me(n, e, l, a) {
+    function ge(n, e, l, a) {
       const s = n[e];
       if (s?.value == null || typeof s.value == "string" && !s.value.trim()) return "—";
       const m = Number(s.value) * l[s.unit];
       return Number.isFinite(m) ? a.format(m) : "—";
     }
-    function ce(n, e) {
-      return me(n, e, pe, se);
+    function ve(n, e) {
+      return ge(n, e, pe, ue);
     }
-    function ee(n, e) {
-      return me(n, e, ve, ue);
+    function le(n, e) {
+      return ge(n, e, fe, ie);
     }
-    function Ve(n, e) {
-      if (!L(n, e)) return "未設定";
-      const l = e === "current" ? 1e3 : 1, a = e === "current" ? ue : se;
+    function Ue(n, e) {
+      if (!P(n, e)) return "未設定";
+      const l = e === "current" ? 1e3 : 1, a = e === "current" ? ie : ue;
       return a.format(n.settings[e + "_min"] * l) + " ～ " + a.format(n.settings[e + "_max"] * l);
     }
-    function I(n, e) {
+    function T(n, e) {
       const l = String(n[e]?.value).toLowerCase();
       return ["1", "true"].includes(l) ? !0 : ["0", "false"].includes(l) ? !1 : null;
     }
-    function te(n) {
-      return !f.value || !v.value.online || I(n.items, "Status.on") === null ? "不明" : I(n.items, "Error.currentTrip") ? "異常" : I(n.items, "Status.voltageRamping") ? "ランプ中" : I(n.items, "Status.on") ? "ON" : "OFF";
+    function X(n) {
+      return !f.value || !v.value.online || T(n.items, "Status.on") === null ? "不明" : T(n.items, "Error.currentTrip") ? "異常" : T(n.items, "Status.voltageRamping") ? "ランプ中" : T(n.items, "Status.on") ? "ON" : "OFF";
     }
-    const ge = { 不明: "#edf1f5", 異常: "#fbe0de", ランプ中: "#fff0cb", ON: "#dcf2e4", OFF: "#fff" };
-    function le(n) {
-      const e = I(n.items, "Status.on");
-      return !h.value && f.value && v.value.online && n.serial && e !== null && (e || L(n, "voltage") && L(n, "current"));
+    const ne = { 不明: "unknown", 異常: "fault", ランプ中: "ramping", ON: "on", OFF: "off" };
+    function ae(n) {
+      const e = T(n.items, "Status.on");
+      return !_.value && f.value && v.value.online && n.serial && e !== null && (e || P(n, "voltage") && P(n, "current"));
     }
-    function Se(n) {
-      le(n) && J(n, "set_output", !I(n.items, "Status.on"));
+    function Ae(n) {
+      ae(n) && Y(n, "set_output", !T(n.items, "Status.on"));
     }
-    async function Ue(n) {
-      const e = E[n.key];
-      e !== void 0 && await B("configure_channels", {
+    async function Fe(n) {
+      const e = G[n.key];
+      e !== void 0 && await W("configure_channels", {
         targets: [{ serial: n.serial, channel: n.channel }],
         changes: { label: e }
-      }, "表示名を保存しました。", n.key) && delete E[n.key];
+      }, "表示名を保存しました。", n.key) && delete G[n.key];
     }
-    async function B(n, e, l, a) {
+    async function W(n, e, l, a) {
       const s = (C) => {
-        a ? j[a] = C : Z.value = C;
-      }, m = he(n, e);
-      h.value = !0, s("処理中…");
+        a ? R[a] = C : B.value = C;
+      }, m = ke(n, e);
+      _.value = !0, s("処理中…");
       try {
-        return await ae.client.request(n, e), m.result = n.startsWith("set_") ? "指令受理" : "保存完了", m.detail = l, s(l), !0;
+        return await se.client.request(n, e), m.result = n.startsWith("set_") ? "指令受理" : "保存完了", m.detail = l, s(l), !0;
       } catch (C) {
         return m.result = "エラー", m.detail = C.message, s(C.message), !1;
       } finally {
-        h.value = !1;
+        _.value = !1;
       }
     }
-    async function Ae() {
-      await B("configure", {
+    async function Ne() {
+      await W("configure", {
         ...b,
         lines: b.lines.split(",").map((n) => n.trim())
       }, "接続設定を保存しました。") && (b.password = "");
     }
-    function Fe(n) {
+    function He(n) {
       y.value = !0, x.value = n;
       for (const e of ["label", "group", "voltage_min", "voltage_max", "current_min", "current_max"]) {
         const l = n.settings[e];
         p[e] = l != null && e.startsWith("current_") ? Number((l * 1e3).toPrecision(15)) : l ?? "";
       }
     }
-    async function Ne() {
+    async function Oe() {
       const n = { ...p };
       delete n.label;
       for (const e of ["voltage_min", "voltage_max", "current_min", "current_max"]) {
-        const l = e.startsWith("current_") ? Y : Number;
+        const l = e.startsWith("current_") ? ee : Number;
         n[e] = n[e] === "" ? null : l(n[e]);
       }
-      await B("configure_channels", {
+      await W("configure_channels", {
         targets: [{ serial: x.value.serial, channel: x.value.channel }],
         changes: n
       }, "チャンネル設定を保存しました。") && (x.value = null);
     }
-    function J(n, e, l) {
-      return B(
+    function Y(n, e, l) {
+      return W(
         e,
         { serial: n.serial, channel: n.channel, value: l },
         "指令を受理。監視欄で実機の反映を確認してください。",
         n.key
       );
     }
-    return Oe(() => {
-      re = ae.client.subscribe("iseg", (n) => {
-        f.value = !!n.connected, n.connection && (v.value = n, oe || (Object.assign(b, n.connection, { lines: n.connection.lines.join(", ") }), oe = !0));
+    return Me(() => {
+      D.value = localStorage.getItem("metis-hv-theme") === "light" ? "light" : "dark", me = se.client.subscribe("iseg", (n) => {
+        f.value = !!n.connected, n.connection && (v.value = n, de || (Object.assign(b, n.connection, { lines: n.connection.lines.join(", ") }), de = !0));
       });
-    }), De(() => re?.()), (n, e) => (o(), r("article", Be, [
-      e[39] || (e[39] = t("h2", null, "iseg CC24", -1)),
-      t("button", {
-        type: "button",
-        onClick: e[0] || (e[0] = (l) => ie.value?.showModal())
-      }, "操作ログ"),
+    }), qe(() => me?.()), (n, e) => (o(), r("article", {
+      class: "iseg-panel hv-panel",
+      "data-theme": D.value
+    }, [
+      t("header", We, [
+        e[19] || (e[19] = t("h2", null, "iseg CC24", -1)),
+        t("div", ze, [
+          t("button", {
+            type: "button",
+            onClick: he
+          }, u(D.value === "dark" ? "ライト" : "ダーク"), 1),
+          t("button", {
+            type: "button",
+            "aria-label": "接続設定",
+            title: "接続設定",
+            onClick: e[0] || (e[0] = (l) => oe.value?.showModal())
+          }, "⚙"),
+          t("button", {
+            type: "button",
+            onClick: e[1] || (e[1] = (l) => re.value?.showModal())
+          }, "ログ")
+        ])
+      ]),
       t("dialog", {
         ref_key: "logDialog",
-        ref: ie,
+        ref: re,
         "aria-labelledby": "iseg-operation-log-title",
         style: { width: "min(56rem, 90vw)", "max-height": "75vh", overflow: "auto" }
       }, [
-        e[19] || (e[19] = t("div", { style: { display: "flex", "align-items": "center", "justify-content": "space-between", gap: "1rem" } }, [
+        e[21] || (e[21] = t("div", { style: { display: "flex", "align-items": "center", "justify-content": "space-between", gap: "1rem" } }, [
           t("h3", { id: "iseg-operation-log-title" }, "操作ログ"),
           t("form", { method: "dialog" }, [
             t("button", null, "閉じる")
           ])
         ], -1)),
-        W.value.length ? (o(), r("table", Ee, [
-          e[18] || (e[18] = t("thead", null, [
+        K.value.length ? (o(), r("table", Je, [
+          e[20] || (e[20] = t("thead", null, [
             t("tr", null, [
               t("th", null, "時刻"),
               t("th", null, "対象"),
@@ -239,83 +263,104 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
             ])
           ], -1)),
           t("tbody", null, [
-            (o(!0), r(_, null, V(W.value, (l) => (o(), r("tr", {
+            (o(!0), r(k, null, V(K.value, (l) => (o(), r("tr", {
               key: l.id
             }, [
-              t("td", Pe, i(l.time), 1),
-              t("td", null, i(l.target), 1),
-              t("td", null, i(l.action), 1),
-              t("td", We, i(l.result), 1),
-              t("td", null, i(l.detail), 1)
+              t("td", Ke, u(l.time), 1),
+              t("td", null, u(l.target), 1),
+              t("td", null, u(l.action), 1),
+              t("td", Qe, u(l.result), 1),
+              t("td", null, u(l.detail), 1)
             ]))), 128))
           ])
-        ])) : (o(), r("p", Re, "この画面からの操作はまだありません。"))
+        ])) : (o(), r("p", Ge, "この画面からの操作はまだありません。"))
       ], 512),
-      t("form", {
-        onSubmit: N(Ae, ["prevent"])
+      t("dialog", {
+        ref_key: "settingsDialog",
+        ref: oe,
+        "aria-labelledby": j(M) + "-settings",
+        class: "hv-settings"
       }, [
-        t("label", null, [
-          e[20] || (e[20] = c("WebSocket URL ", -1)),
-          d(t("input", {
-            "onUpdate:modelValue": e[1] || (e[1] = (l) => b.url = l),
-            placeholder: "ws://cc24:8080",
-            required: ""
-          }, null, 512), [
-            [
-              g,
-              b.url,
-              void 0,
-              { trim: !0 }
-            ]
-          ])
+        t("header", Ye, [
+          t("h3", {
+            id: j(M) + "-settings"
+          }, "接続設定", 8, Ze),
+          e[22] || (e[22] = t("form", { method: "dialog" }, [
+            t("button", null, "閉じる")
+          ], -1))
         ]),
-        t("label", null, [
-          e[21] || (e[21] = c("ユーザー名 ", -1)),
-          d(t("input", {
-            "onUpdate:modelValue": e[2] || (e[2] = (l) => b.username = l),
-            autocomplete: "username"
-          }, null, 512), [
-            [g, b.username]
-          ])
-        ]),
-        t("label", null, [
-          e[22] || (e[22] = c("パスワード ", -1)),
-          d(t("input", {
-            "onUpdate:modelValue": e[3] || (e[3] = (l) => b.password = l),
-            type: "password",
-            autocomplete: "new-password",
-            placeholder: v.value.password_set ? "設定済み" : ""
-          }, null, 8, ze), [
-            [g, b.password]
-          ])
-        ]),
-        t("label", null, [
-          e[23] || (e[23] = c("CAN ライン ", -1)),
-          d(t("input", {
-            "onUpdate:modelValue": e[4] || (e[4] = (l) => b.lines = l),
-            required: "",
-            placeholder: "0, 1"
-          }, null, 512), [
-            [g, b.lines]
-          ])
-        ]),
-        t("button", {
-          disabled: h.value || !f.value
-        }, "接続設定を保存", 8, Ge)
-      ], 32),
-      t("p", Je, i(f.value ? v.value.online ? "iCS2 接続中" : v.value.error || "iCS2 未接続" : "Metis ノード未接続"), 1),
-      Z.value ? (o(), r("p", Ke, i(Z.value), 1)) : U("", !0),
-      t("div", Qe, [
-        e[25] || (e[25] = t("span", null, "モニター", -1)),
+        t("form", {
+          class: "hv-settings-form",
+          onSubmit: N(Ne, ["prevent"])
+        }, [
+          t("label", null, [
+            e[23] || (e[23] = c("WebSocket URL ", -1)),
+            d(t("input", {
+              "onUpdate:modelValue": e[2] || (e[2] = (l) => b.url = l),
+              placeholder: "ws://cc24:8080",
+              required: ""
+            }, null, 512), [
+              [
+                g,
+                b.url,
+                void 0,
+                { trim: !0 }
+              ]
+            ])
+          ]),
+          t("label", null, [
+            e[24] || (e[24] = c("ユーザー名 ", -1)),
+            d(t("input", {
+              "onUpdate:modelValue": e[3] || (e[3] = (l) => b.username = l),
+              autocomplete: "username"
+            }, null, 512), [
+              [g, b.username]
+            ])
+          ]),
+          t("label", null, [
+            e[25] || (e[25] = c("パスワード ", -1)),
+            d(t("input", {
+              "onUpdate:modelValue": e[4] || (e[4] = (l) => b.password = l),
+              type: "password",
+              autocomplete: "new-password",
+              placeholder: v.value.password_set ? "設定済み" : ""
+            }, null, 8, we), [
+              [g, b.password]
+            ])
+          ]),
+          t("label", null, [
+            e[26] || (e[26] = c("CAN ライン ", -1)),
+            d(t("input", {
+              "onUpdate:modelValue": e[5] || (e[5] = (l) => b.lines = l),
+              required: "",
+              placeholder: "0, 1"
+            }, null, 512), [
+              [g, b.lines]
+            ])
+          ]),
+          t("button", {
+            disabled: _.value || !f.value
+          }, "接続設定を保存", 8, et)
+        ], 32),
+        B.value ? (o(), r("p", tt, u(B.value), 1)) : S("", !0)
+      ], 8, Xe),
+      t("p", {
+        class: "hv-status",
+        "data-online": f.value && v.value.online,
+        role: "status"
+      }, u(f.value ? v.value.online ? "iCS2 接続中" : v.value.error || "iCS2 未接続" : "Metis ノード未接続"), 9, lt),
+      B.value ? (o(), r("p", nt, u(B.value), 1)) : S("", !0),
+      t("div", at, [
+        e[28] || (e[28] = t("span", null, "モニター", -1)),
         t("button", {
           type: "button",
           role: "switch",
           "aria-label": "詳細モード",
           "aria-checked": y.value,
-          onClick: e[5] || (e[5] = (l) => {
+          onClick: e[6] || (e[6] = (l) => {
             y.value = !y.value, x.value = null;
           }),
-          style: ne({
+          style: Ie({
             width: "2.75rem",
             height: "1.5rem",
             padding: ".15rem",
@@ -326,82 +371,82 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
             justifyContent: y.value ? "flex-end" : "flex-start",
             background: y.value ? "#145375" : "#627786"
           })
-        }, [...e[24] || (e[24] = [
+        }, [...e[27] || (e[27] = [
           t("span", {
             "aria-hidden": "true",
             style: { width: "1.2rem", height: "1.2rem", "border-radius": "50%", background: "white" }
           }, null, -1)
-        ])], 12, Xe),
-        e[26] || (e[26] = t("span", null, "詳細", -1))
+        ])], 12, st),
+        e[29] || (e[29] = t("span", null, "詳細", -1))
       ]),
-      t("label", Ye, [
+      t("label", ut, [
         t("input", {
           type: "checkbox",
-          disabled: !M.value.length,
-          onChange: xe,
-          checked: M.value.length > 0 && q.value.length === M.value.length,
-          ".indeterminate": q.value.length > 0 && q.value.length < M.value.length
-        }, null, 40, Ze),
-        e[27] || (e[27] = c(" 全グループを選択 ", -1))
+          disabled: !I.value.length,
+          onChange: Ve,
+          checked: I.value.length > 0 && $.value.length === I.value.length,
+          ".indeterminate": $.value.length > 0 && $.value.length < I.value.length
+        }, null, 40, it),
+        e[30] || (e[30] = c(" 全グループを選択 ", -1))
       ]),
       A.value.length ? (o(), r("div", {
         key: 1,
         class: "iseg-group-tabs",
         role: "tablist",
         "aria-label": "チャンネルグループ",
-        onKeydown: _e
+        onKeydown: Ce
       }, [
-        (o(!0), r(_, null, V(A.value, (l, a) => (o(), r("button", {
-          id: K(z) + "-tab-" + a,
+        (o(!0), r(k, null, V(A.value, (l, a) => (o(), r("button", {
+          id: j(M) + "-tab-" + a,
           key: l,
           type: "button",
           role: "tab",
-          "aria-selected": l === D.value,
-          "aria-controls": K(z) + "-panel",
-          tabindex: l === D.value ? 0 : -1,
-          onClick: (s) => G.value = l
-        }, i(l), 9, we))), 128))
-      ], 32)) : U("", !0),
-      y.value ? (o(), r(_, { key: 2 }, [
-        e[30] || (e[30] = t("h3", null, "選択チャンネルの一括設定", -1)),
+          "aria-selected": l === q.value,
+          "aria-controls": j(M) + "-panel",
+          tabindex: l === q.value ? 0 : -1,
+          onClick: (s) => Q.value = l
+        }, u(l), 9, ot))), 128))
+      ], 32)) : S("", !0),
+      y.value ? (o(), r(k, { key: 2 }, [
+        e[33] || (e[33] = t("h3", null, "選択チャンネルの一括設定", -1)),
         t("form", {
           class: "iseg-bulk",
-          onSubmit: N(Ce, ["prevent"])
+          onSubmit: N(Se, ["prevent"])
         }, [
-          (o(), r(_, null, V(w, ({ key: l, label: a, unit: s }) => t("fieldset", { key: l }, [
+          (o(), r(k, null, V(te, ({ key: l, label: a, unit: s }) => t("fieldset", { key: l }, [
             t("legend", null, [
               t("label", null, [
                 d(t("input", {
-                  "onUpdate:modelValue": (m) => u[l] = m,
+                  "onUpdate:modelValue": (m) => i[l] = m,
                   type: "checkbox"
-                }, null, 8, et), [
-                  [R, u[l]]
+                }, null, 8, rt), [
+                  [z, i[l]]
                 ]),
-                c(" " + i(a) + "の範囲を変更", 1)
+                c(" " + u(a) + "の範囲を変更", 1)
               ])
             ]),
             t("label", null, [
-              c("下限 (" + i(s) + ") ", 1),
+              c("下限 (" + u(s) + ") ", 1),
               d(t("input", {
-                "onUpdate:modelValue": (m) => u[l + "_min"] = m,
+                "onUpdate:modelValue": (m) => i[l + "_min"] = m,
                 type: "number",
                 step: "any",
-                disabled: !u[l],
-                required: u[l]
-              }, null, 8, tt), [
-                [g, u[l + "_min"]]
+                disabled: !i[l],
+                required: i[l]
+              }, null, 8, dt), [
+                [g, i[l + "_min"]]
               ])
             ]),
             t("label", null, [
-              c("上限 (" + i(s) + ") ", 1),
+              c("上限 (" + u(s) + ") ", 1),
               d(t("input", {
-                "onUpdate:modelValue": (m) => u[l + "_max"] = m,
+                "onUpdate:modelValue": (m) => i[l + "_max"] = m,
                 type: "number",
                 step: "any",
-                disabled: !u[l],
-                required: u[l]
-              }, null, 8, lt), [
-                [g, u[l + "_max"]]
+                disabled: !i[l],
+                required: i[l]
+              }, null, 8, mt), [
+                [g, i[l + "_max"]]
               ])
             ])
           ])), 64)),
@@ -409,67 +454,68 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
             t("legend", null, [
               t("label", null, [
                 d(t("input", {
-                  "onUpdate:modelValue": e[6] || (e[6] = (l) => u.grouping = l),
+                  "onUpdate:modelValue": e[7] || (e[7] = (l) => i.grouping = l),
                   type: "checkbox"
                 }, null, 512), [
-                  [R, u.grouping]
+                  [z, i.grouping]
                 ]),
-                e[28] || (e[28] = c(" グループを変更", -1))
+                e[31] || (e[31] = c(" グループを変更", -1))
               ])
             ]),
             d(t("input", {
-              "onUpdate:modelValue": e[7] || (e[7] = (l) => u.group = l),
+              "onUpdate:modelValue": e[8] || (e[8] = (l) => i.group = l),
               "aria-label": "グループ名",
-              disabled: !u.grouping,
+              disabled: !i.grouping,
               maxlength: "100",
               placeholder: "空欄で未分類"
-            }, null, 8, nt), [
-              [g, u.group]
+            }, null, 8, ct), [
+              [g, i.group]
             ])
           ]),
           t("fieldset", null, [
             t("legend", null, [
               t("label", null, [
                 d(t("input", {
-                  "onUpdate:modelValue": e[8] || (e[8] = (l) => u.naming = l),
+                  "onUpdate:modelValue": e[9] || (e[9] = (l) => i.naming = l),
                   type: "checkbox"
                 }, null, 512), [
-                  [R, u.naming]
+                  [z, i.naming]
                 ]),
-                e[29] || (e[29] = c(" 表示名を変更", -1))
+                e[32] || (e[32] = c(" 表示名を変更", -1))
               ])
             ]),
             d(t("input", {
-              "onUpdate:modelValue": e[9] || (e[9] = (l) => u.label = l),
+              "onUpdate:modelValue": e[10] || (e[10] = (l) => i.label = l),
               "aria-label": "表示名",
-              disabled: !u.naming,
+              disabled: !i.naming,
               maxlength: "100"
-            }, null, 8, at), [
-              [g, u.label]
+            }, null, 8, gt), [
+              [g, i.label]
             ])
           ]),
           t("button", {
-            disabled: h.value || !f.value || !q.value.length || !(u.voltage || u.current || u.grouping || u.naming)
-          }, " 選択した " + i(q.value.length) + " CH に適用 ", 9, st)
+            disabled: _.value || !f.value || !$.value.length || !(i.voltage || i.current || i.grouping || i.naming)
+          }, " 選択した " + u($.value.length) + " CH に適用 ", 9, vt)
         ], 32)
-      ], 64)) : U("", !0),
-      y.value ? U("", !0) : (o(), r("p", ut, [
-        e[31] || (e[31] = c("行の色： ", -1)),
-        (o(), r(_, null, V(ge, (l, a) => t("span", {
+      ], 64)) : S("", !0),
+      y.value ? S("", !0) : (o(), r("p", bt, [
+        e[34] || (e[34] = c("行の色： ", -1)),
+        (o(), r(k, null, V(ne, (l, a) => t("span", {
           key: a,
-          style: ne({ background: l, padding: ".15rem .4rem", marginInlineEnd: ".25rem", border: "1px solid #bcc8cf" })
-        }, i(a), 5)), 64))
+          class: "hv-legend",
+          "data-state": l
+        }, u(a), 9, pt)), 64))
       ])),
-      (o(!0), r(_, null, V(ke.value, (l) => (o(), Me(qe(l.key === "unassigned" ? "details" : "section"), {
+      (o(!0), r(k, null, V(xe.value, (l) => (o(), $e(Te(l.key === "unassigned" ? "details" : "section"), {
         key: l.key,
-        class: Ie({ "iseg-unassigned": l.key === "unassigned" }),
+        class: je({ "iseg-unassigned": l.key === "unassigned" }),
         open: l.key === "unassigned" ? !0 : void 0,
-        id: l.key === "group" ? K(z) + "-panel" : void 0,
+        id: l.key === "group" ? j(M) + "-panel" : void 0,
         role: l.key === "group" ? "tabpanel" : void 0,
-        "aria-labelledby": l.key === "group" ? K(z) + "-tab-" + de.value : void 0
+        "aria-labelledby": l.key === "group" ? j(M) + "-tab-" + ce.value : void 0
       }, {
-        default: $e(() => [
-          l.key === "unassigned" ? (o(), r("summary", it, "未分類（" + i(l.rows.length) + " CH）", 1)) : U("", !0),
+        default: Le(() => [
+          l.key === "unassigned" ? (o(), r("summary", ft, "未分類（" + u(l.rows.length) + " CH）", 1)) : S("", !0),
           y.value ? (o(), r("div", {
             key: 1,
             class: "iseg-table-scroll",
@@ -477,8 +523,8 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
             role: "region",
             "aria-label": l.label + " チャンネル詳細"
           }, [
-            t("table", rt, [
-              e[32] || (e[32] = t("thead", null, [
+            t("table", yt, [
+              e[35] || (e[35] = t("thead", null, [
                 t("tr", null, [
                   t("th", null, "選択"),
                   t("th", null, "チャンネル"),
@@ -492,44 +538,45 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
                 ])
               ], -1)),
               t("tbody", null, [
-                (o(!0), r(_, null, V(l.rows.filter((a) => a.serial), (a) => (o(), r("tr", {
-                  key: a.key
+                (o(!0), r(k, null, V(l.rows.filter((a) => a.serial), (a) => (o(), r("tr", {
+                  key: a.key,
+                  "data-state": ne[X(a)]
                 }, [
                   t("td", null, [
                     d(t("input", {
-                      "onUpdate:modelValue": e[10] || (e[10] = (s) => H.value = s),
+                      "onUpdate:modelValue": e[11] || (e[11] = (s) => H.value = s),
                       type: "checkbox",
                       value: a.key,
                       "aria-label": a.serial + " CH " + a.channel
-                    }, null, 8, dt), [
-                      [R, H.value]
+                    }, null, 8, kt), [
+                      [z, H.value]
                     ])
                   ]),
                   t("td", null, [
-                    c("CH " + i(a.channel), 1),
-                    t("small", mt, i(a.serial) + " · " + i(a.location), 1)
+                    c("CH " + u(a.channel), 1),
+                    t("small", xt, u(a.serial) + " · " + u(a.location), 1)
                   ]),
                   t("td", null, [
                     t("form", {
-                      onSubmit: N((s) => Ue(a), ["prevent"])
+                      onSubmit: N((s) => Fe(a), ["prevent"])
                     }, [
                       t("input", {
                         "aria-label": a.serial + " CH " + a.channel + " 表示名",
-                        value: E[a.key] ?? a.settings.label ?? "",
-                        disabled: h.value || !f.value,
+                        value: G[a.key] ?? a.settings.label ?? "",
+                        disabled: _.value || !f.value,
                         maxlength: "100",
-                        onInput: (s) => E[a.key] = s.target.value
-                      }, null, 40, gt)
-                    ], 40, ct),
-                    j[a.key] ? (o(), r("small", bt, i(j[a.key]), 1)) : U("", !0)
+                        onInput: (s) => G[a.key] = s.target.value
+                      }, null, 40, Vt)
+                    ], 40, Ct),
+                    R[a.key] ? (o(), r("small", St, u(R[a.key]), 1)) : S("", !0)
                   ]),
-                  t("td", null, i(a.settings.group || "未分類"), 1),
-                  (o(), r(_, null, V(w, ({ key: s }) => t("td", { key: s }, i(Ve(a, s)), 1)), 64)),
+                  t("td", null, u(a.settings.group || "未分類"), 1),
+                  (o(), r(k, null, V(te, ({ key: s }) => t("td", { key: s }, u(Ue(a, s)), 1)), 64)),
                   t("td", null, [
-                    t("span", pt, i(ee(a.items, "Control.currentSet")), 1),
+                    t("span", Ut, u(le(a.items, "Control.currentSet")), 1),
                     t("form", {
                       class: "iseg-setpoint",
-                      onSubmit: N((s) => J(a, "set_current", Y(O[a.key + "a"])), ["prevent"])
+                      onSubmit: N((s) => Y(a, "set_current", ee(O[a.key + "a"])), ["prevent"])
                     }, [
                       d(t("input", {
                         "onUpdate:modelValue": (s) => O[a.key + "a"] = s,
@@ -537,55 +584,55 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
                         step: "any",
                         required: "",
                         "aria-label": (a.settings.label || "CH " + a.channel) + " 電流設定 (mA)"
-                      }, null, 8, ft), [
+                      }, null, 8, Ft), [
                         [g, O[a.key + "a"]]
                       ]),
                       t("button", {
-                        disabled: h.value || !f.value || !v.value.online || !L(a, "current")
-                      }, "設定", 8, yt)
-                    ], 40, vt)
+                        disabled: _.value || !f.value || !v.value.online || !P(a, "current")
+                      }, "設定", 8, Nt)
+                    ], 40, At)
                   ]),
                   t("td", null, [
-                    X(a) ? (o(), r("form", {
+                    w(a) ? (o(), r("form", {
                       key: 0,
                       class: "iseg-setpoint",
                       onSubmit: N((s) => be(a), ["prevent"])
                     }, [
                       d(t("select", {
-                        "onUpdate:modelValue": (s) => $[a.key] = s,
+                        "onUpdate:modelValue": (s) => L[a.key] = s,
                         "aria-label": "CH " + a.channel + " iseg 遅延トリップ"
                       }, [
-                        t("option", _t, i(P[X(a)]) + "（現在）", 1),
-                        (o(), r(_, null, V(P, (s, m) => t("option", {
+                        t("option", Dt, u(J[w(a)]) + "（現在）", 1),
+                        (o(), r(k, null, V(J, (s, m) => t("option", {
                           key: m,
                           value: m
-                        }, i(s), 9, xt)), 64))
-                      ], 8, kt), [
-                        [je, $[a.key]]
+                        }, u(s), 9, Mt)), 64))
+                      ], 8, Ot), [
+                        [Be, L[a.key]]
                       ]),
                       t("button", {
-                        disabled: h.value || !f.value || !v.value.online || $[a.key] == null
-                      }, "設定", 8, Ct)
-                    ], 40, ht)) : (o(), r("span", Vt, "取得不可"))
+                        disabled: _.value || !f.value || !v.value.online || L[a.key] == null
+                      }, "設定", 8, qt)
+                    ], 40, Ht)) : (o(), r("span", It, "取得不可"))
                   ]),
                   t("td", null, [
                     t("button", {
                       type: "button",
-                      onClick: (s) => Fe(a)
-                    }, "編集", 8, St)
+                      onClick: (s) => He(a)
+                    }, "編集", 8, $t)
                   ])
-                ]))), 128))
+                ], 8, _t))), 128))
               ])
             ])
-          ], 8, ot)) : (o(), r("div", {
+          ], 8, ht)) : (o(), r("div", {
             key: 2,
             class: "iseg-table-scroll",
             tabindex: "0",
             role: "region",
             "aria-label": l.label + " モニター"
           }, [
-            t("table", At, [
-              e[33] || (e[33] = t("thead", null, [
+            t("table", jt, [
+              e[36] || (e[36] = t("thead", null, [
                 t("tr", null, [
                   t("th", null, "選択"),
                   t("th", null, "表示名"),
@@ -597,38 +644,39 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
                 ])
               ], -1)),
               t("tbody", null, [
-                (o(!0), r(_, null, V(l.rows, (a) => (o(), r("tr", {
+                (o(!0), r(k, null, V(l.rows, (a) => (o(), r("tr", {
                   key: a.key,
-                  style: ne({ background: ge[te(a)], whiteSpace: "nowrap" })
+                  "data-state": ne[X(a)],
+                  style: { "white-space": "nowrap" }
                 }, [
                   t("td", null, [
                     d(t("input", {
-                      "onUpdate:modelValue": e[11] || (e[11] = (s) => H.value = s),
+                      "onUpdate:modelValue": e[12] || (e[12] = (s) => H.value = s),
                       type: "checkbox",
                       value: a.key,
                       disabled: !a.serial,
                       "aria-label": "選択: " + (a.settings.label || "CH " + a.channel)
-                    }, null, 8, Ft), [
-                      [R, H.value]
+                    }, null, 8, Bt), [
+                      [z, H.value]
                     ])
                   ]),
                   t("td", null, [
                     t("button", {
                       type: "button",
-                      disabled: !le(a),
-                      onClick: (s) => Se(a),
-                      "aria-label": (a.settings.label || "CH " + a.channel) + "、状態: " + te(a),
-                      title: te(a) + (le(a) ? "。クリックで出力切替" : "")
-                    }, i(a.settings.label || "CH " + a.channel), 9, Nt)
+                      disabled: !ae(a),
+                      onClick: (s) => Ae(a),
+                      "aria-label": (a.settings.label || "CH " + a.channel) + "、状態: " + X(a),
+                      title: X(a) + (ae(a) ? "。クリックで出力切替" : "")
+                    }, u(a.settings.label || "CH " + a.channel), 9, Rt)
                   ]),
-                  t("td", Ht, i(ce(a.items, "Control.voltageSet")), 1),
-                  t("td", Ot, i(ce(a.items, "Status.voltageMeasure")), 1),
-                  t("td", Dt, i(ee(a.items, "Control.currentSet")), 1),
-                  t("td", Mt, i(ee(a.items, "Status.currentMeasure")), 1),
+                  t("td", Et, u(ve(a.items, "Control.voltageSet")), 1),
+                  t("td", Pt, u(ve(a.items, "Status.voltageMeasure")), 1),
+                  t("td", Wt, u(le(a.items, "Control.currentSet")), 1),
+                  t("td", zt, u(le(a.items, "Status.currentMeasure")), 1),
                   t("td", null, [
                     t("form", {
                       class: "iseg-setpoint",
-                      onSubmit: N((s) => J(a, "set_voltage", Number(O[a.key + "v"])), ["prevent"])
+                      onSubmit: N((s) => Y(a, "set_voltage", Number(O[a.key + "v"])), ["prevent"])
                     }, [
                       d(t("input", {
                         "onUpdate:modelValue": (s) => O[a.key + "v"] = s,
@@ -636,41 +684,41 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
                         step: "any",
                         required: "",
                         "aria-label": (a.settings.label || "CH " + a.channel) + " 電圧設定 (V)"
-                      }, null, 8, It), [
+                      }, null, 8, Jt), [
                         [g, O[a.key + "v"]]
                       ]),
                       t("button", {
-                        disabled: h.value || !f.value || !v.value.online || !a.serial || !L(a, "voltage")
-                      }, "設定", 8, $t)
-                    ], 40, qt),
-                    j[a.key] ? (o(), r("small", jt, i(j[a.key]), 1)) : U("", !0)
+                        disabled: _.value || !f.value || !v.value.online || !a.serial || !P(a, "voltage")
+                      }, "設定", 8, Kt)
+                    ], 40, Gt),
+                    R[a.key] ? (o(), r("small", Qt, u(R[a.key]), 1)) : S("", !0)
                   ])
-                ], 4))), 128))
+                ], 8, Lt))), 128))
               ])
             ])
-          ], 8, Ut))
+          ], 8, Tt))
         ]),
         _: 2
       }, 1032, ["class", "open", "id", "role", "aria-labelledby"]))), 128)),
       x.value && y.value ? (o(), r("form", {
         key: 4,
         class: "iseg-editor",
-        onSubmit: N(Ne, ["prevent"])
+        onSubmit: N(Oe, ["prevent"])
       }, [
-        t("h3", null, i(x.value.serial) + " / CH " + i(x.value.channel), 1),
+        t("h3", null, u(x.value.serial) + " / CH " + u(x.value.channel), 1),
         t("label", null, [
-          e[34] || (e[34] = c("グループ ", -1)),
+          e[37] || (e[37] = c("グループ ", -1)),
           d(t("input", {
-            "onUpdate:modelValue": e[12] || (e[12] = (l) => p.group = l),
+            "onUpdate:modelValue": e[13] || (e[13] = (l) => p.group = l),
             maxlength: "100"
           }, null, 512), [
             [g, p.group]
           ])
         ]),
         t("label", null, [
-          e[35] || (e[35] = c("最低電圧 (V) ", -1)),
+          e[38] || (e[38] = c("最低電圧 (V) ", -1)),
           d(t("input", {
-            "onUpdate:modelValue": e[13] || (e[13] = (l) => p.voltage_min = l),
+            "onUpdate:modelValue": e[14] || (e[14] = (l) => p.voltage_min = l),
             type: "number",
             step: "any"
           }, null, 512), [
@@ -678,9 +726,9 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
           ])
         ]),
         t("label", null, [
-          e[36] || (e[36] = c("最高電圧 (V) ", -1)),
+          e[39] || (e[39] = c("最高電圧 (V) ", -1)),
           d(t("input", {
-            "onUpdate:modelValue": e[14] || (e[14] = (l) => p.voltage_max = l),
+            "onUpdate:modelValue": e[15] || (e[15] = (l) => p.voltage_max = l),
             type: "number",
             step: "any"
           }, null, 512), [
@@ -688,9 +736,9 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
           ])
         ]),
         t("label", null, [
-          e[37] || (e[37] = c("最低電流 (mA) ", -1)),
+          e[40] || (e[40] = c("最低電流 (mA) ", -1)),
           d(t("input", {
-            "onUpdate:modelValue": e[15] || (e[15] = (l) => p.current_min = l),
+            "onUpdate:modelValue": e[16] || (e[16] = (l) => p.current_min = l),
             type: "number",
             step: "any"
           }, null, 512), [
@@ -698,9 +746,9 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
           ])
         ]),
         t("label", null, [
-          e[38] || (e[38] = c("最高電流 (mA) ", -1)),
+          e[41] || (e[41] = c("最高電流 (mA) ", -1)),
           d(t("input", {
-            "onUpdate:modelValue": e[16] || (e[16] = (l) => p.current_max = l),
+            "onUpdate:modelValue": e[17] || (e[17] = (l) => p.current_max = l),
             type: "number",
             step: "any"
           }, null, 512), [
@@ -708,23 +756,23 @@ const Be = { class: "iseg-panel" }, Re = { key: 0 }, Ee = {
           ])
         ]),
         t("button", {
-          disabled: h.value || !f.value
-        }, "保存", 8, Tt),
+          disabled: _.value || !f.value
+        }, "保存", 8, Xt),
         t("button", {
           type: "button",
-          onClick: e[17] || (e[17] = (l) => x.value = null)
+          onClick: e[18] || (e[18] = (l) => x.value = null)
         }, "閉じる")
-      ], 32)) : U("", !0)
-    ]));
+      ], 32)) : S("", !0)
+    ], 8, Pe));
   }
 };
-function Rt(Q) {
-  return Te({
+function wt(Z) {
+  return Re({
     setup() {
-      return () => Le(Lt, { client: Q });
+      return () => Ee(Yt, { client: Z });
     }
   });
 }
 export {
-  Rt as mount
+  wt as mount
 };
