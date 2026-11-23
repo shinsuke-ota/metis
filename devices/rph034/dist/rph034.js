@@ -44,7 +44,9 @@ const z = ["data-theme"], G = { class: "hv-toolbar" }, J = { class: "hv-actions"
             channel: n.channel,
             label: b.value[n.channel] ?? n.label ?? ""
           });
-          b.value[n.channel] = t, u.value = "表示名を保存しました。";
+          y.value = y.value.map(row => row.channel === n.channel ? { ...row, label: t } : row);
+          delete b.value[n.channel];
+          u.value = "表示名を保存しました。";
         } catch (t) {
           u.value = t.message;
         } finally {
@@ -73,8 +75,8 @@ const z = ["data-theme"], G = { class: "hv-toolbar" }, J = { class: "hv-actions"
           }, a(v.value === "dark" ? "ライト" : "ダーク"), 1),
           e("button", {
             type: "button",
-            "aria-label": "チャンネル設定",
-            title: "チャンネル設定",
+            "aria-label": "接続設定",
+            title: "接続設定",
             onClick: t[0] || (t[0] = (l) => k.value?.showModal())
           }, "⚙")
         ])
@@ -125,7 +127,23 @@ const z = ["data-theme"], G = { class: "hv-toolbar" }, J = { class: "hv-actions"
             }, [
               d.value ? (i(), r(_, { key: 0 }, [
                 e("th", ee, "CH " + a(l.channel), 1),
-                e("td", null, a(l.label || "—"), 1),
+                e("td", null, [
+                  e("form", {
+                    onSubmit: S((C) => T(l), ["prevent"])
+                  }, [
+                    e("input", {
+                      value: b.value[l.channel] ?? l.label ?? "",
+                      "aria-label": "CH " + l.channel + " の表示名",
+                      placeholder: "表示名",
+                      maxlength: "100",
+                      disabled: o.value || !c.value,
+                      onInput: (C) => b.value[l.channel] = C.target.value
+                    }, null, 40, he),
+                    e("button", {
+                      disabled: o.value || !c.value
+                    }, "保存", 8, pe)
+                  ], 40, ve)
+                ]),
                 e("td", null, a(l.output == null ? "不明" : l.output ? "ON" : "OFF"), 1)
               ], 64)) : (i(), r(_, { key: 1 }, [
                 e("th", te, a(l.label || "CH " + l.channel), 1),
@@ -154,7 +172,7 @@ const z = ["data-theme"], G = { class: "hv-toolbar" }, J = { class: "hv-actions"
         "aria-labelledby": P(H)
       }, [
         e("header", re, [
-          e("h3", { id: P(H) }, "チャンネル設定", 8, ce),
+          e("h3", { id: P(H) }, "接続設定", 8, ce),
           t[8] || (t[8] = e("form", { method: "dialog" }, [
             e("button", null, "閉じる")
           ], -1))
@@ -198,27 +216,6 @@ const z = ["data-theme"], G = { class: "hv-toolbar" }, J = { class: "hv-actions"
             disabled: o.value || !c.value
           }, "接続設定を保存", 8, de)
         ], 32),
-        (i(!0), r(_, null, I(y.value, (l) => (i(), r("div", {
-          key: l.channel,
-          class: "hv-label-row"
-        }, [
-          e("span", null, "CH " + a(l.channel), 1),
-          e("form", {
-            onSubmit: S((C) => T(l), ["prevent"])
-          }, [
-            e("input", {
-              value: b.value[l.channel] ?? l.label ?? "",
-              "aria-label": "CH " + l.channel + " の表示名",
-              placeholder: "表示名",
-              maxlength: "100",
-              disabled: o.value || !c.value,
-              onInput: (C) => b.value[l.channel] = C.target.value
-            }, null, 40, he),
-            e("button", {
-              disabled: o.value || !c.value
-            }, "保存", 8, pe)
-          ], 40, ve)
-        ]))), 128)),
         u.value ? (i(), r("p", be, a(u.value), 1)) : N("", !0)
       ], 8, ie)
     ], 8, z));

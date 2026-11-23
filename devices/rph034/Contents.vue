@@ -50,7 +50,8 @@ async function saveLabel(row) {
     const { label } = await props.client.request('set_label', {
       channel: row.channel, label: drafts.value[row.channel] ?? row.label ?? '',
     });
-    drafts.value[row.channel] = label;
+    channels.value = channels.value.map(item => item.channel === row.channel ? { ...item, label } : item);
+    delete drafts.value[row.channel];
     message.value = '表示名を保存しました。';
   } catch (error) {
     message.value = error.message;
@@ -89,7 +90,7 @@ function toggleTheme() {
       <h2>RPH-034</h2>
       <div class="hv-actions">
         <button type="button" @click="toggleTheme">{{ theme === 'dark' ? 'ライト' : 'ダーク' }}</button>
-        <button type="button" aria-label="チャンネル設定" title="チャンネル設定" @click="settingsDialog?.showModal()">⚙</button>
+        <button type="button" aria-label="接続設定" title="接続設定" @click="settingsDialog?.showModal()">⚙</button>
       </div>
     </header>
     <p class="hv-status" :data-online="online" role="status">
@@ -113,7 +114,15 @@ function toggleTheme() {
           <tr v-for="row in channels" :key="row.channel" :data-state="!online || row.output == null ? 'unknown' : row.output ? 'on' : 'off'">
             <template v-if="detail">
               <th scope="row">CH {{ row.channel }}</th>
-              <td>{{ row.label || '—' }}</td>
+              <td>
+                <form @submit.prevent="saveLabel(row)">
+                  <input :value="drafts[row.channel] ?? row.label ?? ''"
+                    :aria-label="'CH ' + row.channel + ' の表示名'" placeholder="表示名"
+                    maxlength="100" :disabled="busy || !connected"
+                    @input="drafts[row.channel] = $event.target.value">
+                  <button :disabled="busy || !connected">保存</button>
+                </form>
+              </td>
               <td>{{ row.output == null ? '不明' : row.output ? 'ON' : 'OFF' }}</td>
             </template>
             <template v-else>
@@ -134,7 +143,7 @@ function toggleTheme() {
     <p v-if="message" role="status">{{ message }}</p>
     <dialog ref="settingsDialog" class="hv-settings" :aria-labelledby="settingsTitle">
       <header class="hv-toolbar">
-        <h3 :id="settingsTitle">チャンネル設定</h3>
+        <h3 :id="settingsTitle">接続設定</h3>
         <form method="dialog"><button>閉じる</button></form>
       </header>
       <form class="hv-settings-form" @submit.prevent="configure">
@@ -142,17 +151,6 @@ function toggleTheme() {
         <label>UDP ポート <input v-model.number="port" type="number" min="1" max="65535" required></label>
         <button :disabled="busy || !connected">接続設定を保存</button>
       </form>
-      <div v-for="row in channels" :key="row.channel" class="hv-label-row">
-        <span>CH {{ row.channel }}</span>
-                <form @submit.prevent="saveLabel(row)">
-                  <input :value="drafts[row.channel] ?? row.label ?? ''"
-                    :aria-label="'CH ' + row.channel + ' の表示名'" placeholder="表示名"
-                    maxlength="100" :disabled="busy || !connected"
-                    @input="drafts[row.channel] = $event.target.value">
-                  <button :disabled="busy || !connected">保存</button>
-                </form>
-
-      </div>
       <p v-if="message" role="status">{{ message }}</p>
     </dialog>
   </section>
