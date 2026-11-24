@@ -264,6 +264,8 @@ class IsegDevice(BaseDevice):
             try:
                 async with asyncio.timeout(4):
                     return await self.write(name, parameters)
+            except ConnectionError:
+                raise
             except (OSError, TimeoutError, WebSocketException) as error:
                 raise ConnectionError("iCS2 operation could not be confirmed. Check the output state.") from error
 
@@ -309,14 +311,30 @@ class IsegDevice(BaseDevice):
                     "c": "setItem", "p": {"p": {"l": line, "a": address, "c": channel},
                                           "i": item, "v": wire_value, "u": unit},
                 }]}))
-                async with asyncio.timeout(1):
-                    while True:
-                        response = json.loads(await socket.recv())
-                        if isinstance(response, dict) and "trigger" in response:
-                            if response["trigger"] not in ("true", True):
-                                raise ValueError("iCS2 rejected the setpoint or output command")
-                            self.next_poll = 0
-                            return {"accepted": True}
+                self.next_poll = 0
+                try:
+                    async with asyncio.timeout(1):
+                        while True:
+                            response = json.loads(await socket.recv())
+                            packets = response if isinstance(response, list) else [response]
+                            for packet in packets:
+                                if not isinstance(packet, dict):
+                                    continue
+                                trigger = packet.get("trigger")
+                                if trigger is True or trigger == "true":
+                                    return {"accepted": True}
+                                if trigger is False or trigger in ("false", "denied"):
+                                    raise ValueError("iCS2 rejected the setpoint or output command")
+                except TimeoutError as error:
+                    raise ConnectionError(
+                        f"iCS2 setItem ({item}): no acknowledgement within 1 second."
+                    ) from error
+                except json.JSONDecodeError as error:
+                    raise ConnectionError(f"iCS2 setItem ({item}): invalid JSON response.") from error
+                except (OSError, WebSocketException) as error:
+                    raise ConnectionError(
+                        f"iCS2 setItem ({item}): connection lost while waiting for acknowledgement."
+                    ) from error
             finally:
                 await self.logout(socket, session)
 
