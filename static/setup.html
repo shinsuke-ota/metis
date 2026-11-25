@@ -3,7 +3,7 @@
 <title>ノード設定</title><style>
 body{font-family:system-ui,sans-serif;background:#eef3f6;color:#172d3a;margin:2rem}
 main{max-width:650px;margin:auto;background:white;padding:2rem;border-radius:12px}
-label{display:block;margin:1.1rem 0}input,select{display:block;width:100%;box-sizing:border-box;padding:.65rem;margin-top:.4rem}
+input[type=checkbox]{display:inline;width:auto;margin:0 .25rem 0 0}label{display:block;margin:1.1rem 0}input,select{display:block;width:100%;box-sizing:border-box;padding:.65rem;margin-top:.4rem}
 button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius:6px;cursor:pointer}
 #message{min-height:2em}a{color:#145780}
 </style></head><body><main><h1>ノード設定</h1>
@@ -12,11 +12,54 @@ button{padding:.65rem 1rem;background:#145780;color:white;border:0;border-radius
 <label>ノード ID <input name="node_id" required pattern="[A-Za-z0-9_-]{1,100}" autocomplete="off"></label>
 <label>上位ノードの WebSocket URL <input name="parent_ws" type="text" placeholder="ws://127.0.0.1:8000/ws/children" autocomplete="off"></label>
 <label>担当デバイス <select name="device_plugin"><option value="">なし</option></select></label>
-<button type="submit">保存して接続</button>
+<fieldset>
+<legend>担当デバイスの登録</legend>
+<label>インスタンス ID <input name="device_instances" placeholder="例：amaneq-01, amaneq-02"></label>
+<p>インスタンス ID はカンマで区切ります。操作先は「ノード ID:インスタンス ID」です。</p>
+</fieldset>
+<fieldset>
+<legend>管理プラグイン</legend>
+<div id="managers"></div>
+<button type="button" id="add-manager">管理プラグインを追加</button>
+</fieldset>
+<fieldset>
+<legend>監視履歴</legend>
+<label>SQLite ファイル <input name="monitor_db" placeholder="例：monitor.sqlite3" autocomplete="off"></label>
+<p>ノード上のパスを指定します。空欄にすると、このノードでの履歴保存を停止します。</p>
+<label>このノードの監視データの送信方式
+<select name="monitor_mode">
+<option value="change">変化時のみ</option><option value="periodic">一定周期のみ</option><option value="both">変化時＋一定周期</option>
+</select></label>
+<label>送信周期（秒） <input name="monitor_interval" type="number" min="0.001" step="any" required></label>
+</fieldset>
+<button type="submit">設定を保存</button>
 </form><p id="message" role="status"></p><p><a href="/">デバイス画面へ</a></p></main>
 <script type="module">
 const form = document.getElementById('config');
 const message = document.getElementById('message');
+const managers = document.getElementById('managers');
+let managementTypes = [];
+
+function addManager(id = '', type = '') {
+  const row = document.createElement('div');
+  const name = document.createElement('input');
+  name.setAttribute('aria-label', '管理インスタンス ID');
+  name.placeholder = '管理インスタンス ID';
+  name.required = true;
+  name.value = id;
+  const select = document.createElement('select');
+  select.setAttribute('aria-label', '管理プラグインの種類');
+  for (const item of managementTypes) select.add(new Option(item, item));
+  if (type) select.value = type;
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.textContent = '削除';
+  remove.addEventListener('click', () => row.remove());
+  row.append(name, select, remove);
+  managers.append(row);
+}
+document.getElementById('add-manager').addEventListener('click', () => addManager());
+
 async function load() {
   try {
     const response = await fetch('/api/config', {cache: 'no-store'});
@@ -24,25 +67,38 @@ async function load() {
     const data = await response.json();
     form.elements.node_id.value = data.node_id;
     form.elements.parent_ws.value = data.parent_ws;
+    managementTypes = data.available_management_plugins;
+    document.getElementById('add-manager').disabled = !managementTypes.length;
+    for (const [id, type] of Object.entries(data.management_plugins)) addManager(id, type);
+    form.elements.device_instances.value = data.device_instances.join(', ');
     for (const name of data.available_plugins) {
+      if (managementTypes.includes(name) && name !== data.device_plugin) continue;
       const option = document.createElement('option');
       option.value = option.textContent = name;
       form.elements.device_plugin.append(option);
     }
     form.elements.device_plugin.value = data.device_plugin;
+    for (const key of ['monitor_db', 'monitor_mode', 'monitor_interval']) {
+      form.elements[key].value = data[key];
+    }
   } catch (error) { message.textContent = `設定を取得できません: ${error.message}`; }
 }
 form.addEventListener('submit', async event => {
   event.preventDefault();
   message.textContent = '保存中…';
   try {
+    const dataToSave = Object.fromEntries(new FormData(form));
+    dataToSave.device_instances = dataToSave.device_instances.split(',').map(id => id.trim()).filter(Boolean);
+    const entries = Array.from(managers.children, row => [row.querySelector('input').value.trim(), row.querySelector('select').value]);
+    if (new Set(entries.map(([id]) => id)).size !== entries.length) throw new Error('管理インスタンス ID が重複しています');
+    dataToSave.management_plugins = Object.fromEntries(entries);
     const response = await fetch('/api/config', {
       method: 'PUT', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(Object.fromEntries(new FormData(form))),
+      body: JSON.stringify(dataToSave),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : `HTTP ${response.status}`);
-    message.textContent = '保存しました。接続先の変更を反映しています。';
+    message.textContent = '設定を保存しました。';
   } catch (error) { message.textContent = `保存できません: ${error.message}`; }
 });
 load();

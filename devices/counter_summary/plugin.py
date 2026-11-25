@@ -1,16 +1,12 @@
 """Counter summary plugin: explicit sources, including IDs not yet connected."""
-import json
 import re
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from devices.base import BaseDevice, DeviceStatus
 
 
-class CounterSummaryDevice:
+class CounterSummaryDevice(BaseDevice):
     def __init__(self):
-        self.manifest = json.loads((ROOT / "manifest.json").read_text())
-        entry = self.manifest["entry"]
-        self.assets = {entry: (ROOT / "dist" / entry).read_text()}
+        super().__init__(__file__)
         self.sources = []
         self.items = []
 
@@ -30,14 +26,15 @@ class CounterSummaryDevice:
             if not isinstance(item, dict) or not set(item) <= {"device_id", "label", "monitor", "count_field", "rate_field"}:
                 raise ValueError("invalid source entry")
             device_id = item.get("device_id")
-            if not isinstance(device_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", device_id) or device_id in seen:
-                raise ValueError("device_id must be unique and contain letters, digits, _ or -")
+            if not isinstance(device_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}(?::[A-Za-z0-9_-]{1,100})?", device_id) or device_id in seen:
+                raise ValueError("デバイス ID は重複しない node_id または node_id:instance_id を指定してください")
             seen.add(device_id)
             entry = {"device_id": device_id}
             for key, default in (("label", device_id), ("monitor", "count"),
                                  ("count_field", "count"), ("rate_field", "rate")):
                 value = item.get(key, default)
-                if not isinstance(value, str) or not value or len(value) > 100:
+                limit = 201 if key == "label" and value == device_id else 100
+                if not isinstance(value, str) or not value or len(value) > limit:
                     raise ValueError(f"invalid {key}")
                 entry[key] = value
             validated.append(entry)
@@ -69,15 +66,18 @@ class CounterSummaryDevice:
     def monitors(self):
         return {"summary": {"sources": self.sources, "items": self.items}}
 
-    def status(self):
+    def status(self) -> DeviceStatus:
         if not self.sources or any(not item["connected"] or not item["available"] or item["state"] == "unknown" for item in self.items):
-            return "unknown"
+            return DeviceStatus.UNKNOWN
         if any(item["state"] == "critical" for item in self.items):
-            return "critical"
+            return DeviceStatus.CRITICAL
         if any(item["state"] == "warning" for item in self.items):
-            return "warning"
-        return "healthy"
+            return DeviceStatus.WARNING
+        return DeviceStatus.HEALTHY
 
 
 def create_device():
     return CounterSummaryDevice()
+
+
+create_device.management_plugin = True

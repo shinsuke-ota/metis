@@ -6,6 +6,7 @@ const count = ref(0);
 const rate = ref(1);
 const desiredRate = ref(1);
 const connected = ref(false);
+const instanceId = ref('');
 const error = ref('');
 let stop;
 
@@ -28,6 +29,7 @@ async function reset() {
 }
 onMounted(() => {
   stop = props.client.subscribe('count', value => {
+    if (typeof value.instance_id === 'string') instanceId.value = value.instance_id;
     if (typeof value.count === 'number') count.value = value.count;
     if (typeof value.rate === 'number') {
       if (Number(desiredRate.value) === rate.value) desiredRate.value = value.rate;
@@ -42,6 +44,7 @@ onUnmounted(() => stop?.());
 <template>
   <article class="clock">
     <h2>Counter</h2>
+    <p v-if="instanceId">UUID <code style="overflow-wrap: anywhere">{{ instanceId }}</code></p>
     <strong>{{ count }}</strong>
     <p>設定レート: {{ rate }} 回/秒 · {{ connected ? '接続中' : '切断中' }}</p>
     <form @submit.prevent="setRate">
